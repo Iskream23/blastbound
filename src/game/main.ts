@@ -9,10 +9,12 @@ import { Preloader } from './scenes/Preloader';
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
-    width: 1024,
-    height: 768,
+    width: 320,
+    height: 180,
+    zoom: 3,
     parent: 'game-container',
     backgroundColor: '#028af8',
+    pixelArt: true,
     scene: [
         Boot,
         Preloader,
