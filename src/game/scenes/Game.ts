@@ -28,14 +28,14 @@ export class Game extends Scene
 
         const level = [
             [ 85, 70, 70, 70, 70, 70, 70, 70, 70, 85 ],
-            [ 85, 1, 1, 1, 1, 1, 1, 1, 1, 85 ],
-            [ 85, 1, 1, 1, 1, 1, 1, 1, 1, 85 ],
-            [ 85, 1, 1, 1, 1, 1, 1, 1, 1, 85 ],
-            [ 85, 1, 1, 1, 1, 1, 1, 1, 1, 85 ],
-            [ 85, 1, 1, 1, 1, 1, 1, 1, 1, 85 ],
-            [ 85, 1, 1, 1, 1, 1, 1, 1, 1, 85 ],
-            [ 85, 1, 1, 1, 1, 1, 1, 1, 1, 85 ],
-            [ 85, 1, 1, 1, 1, 1, 1, 1, 1, 85 ],
+            [ 85, 1,  1,  1,  1,  1,  1,  1,  1,  85 ],
+            [ 85, 1,  70, 1,  70, 70, 1,  70, 1,  85 ],
+            [ 85, 1,  1,  1,  1,  1,  1,  1,  1,  85 ],
+            [ 85, 1,  70, 1,  70, 70, 1,  70, 1,  85 ],
+            [ 85, 1,  1,  1,  1,  1,  1,  1,  1,  85 ],
+            [ 85, 1,  70, 1,  70, 70, 1,  70, 1,  85 ],
+            [ 85, 1,  1,  1,  1,  1,  1,  1,  1,  85 ],
+            [ 85, 1,  1,  1,  1,  1,  1,  1,  1,  85 ],
             [ 70, 70, 70, 70, 70, 70, 70, 70, 70, 70 ],
         ]
 
@@ -49,12 +49,17 @@ export class Game extends Scene
 
         const layer = map.createLayer(0, tiles, 0, 0);
 
-        const playerX = (1 * 16) + 8;
-        const playerY = (1 * 16) + 8;
-        this.player = new Player(this, playerX, playerY);
+        this.player = new Player(this, 1, 1, level);
 
         this.input.once('pointerdown', () => {
             this.scene.start('GameOver');
         });
+    }
+
+    update()
+    {
+        if (this.player) {
+            this.player.update();
+        }
     }
 }
