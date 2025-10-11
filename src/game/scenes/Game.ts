@@ -1,11 +1,13 @@
 import { Scene } from 'phaser';
 import { Player } from '../gameobjects/Player';
+import { Level } from '../gameobjects/Level';
 
 export class Game extends Scene
 {
     camera: Phaser.Cameras.Scene2D.Camera;
     background: Phaser.GameObjects.Image;
     player: Player;
+    level: Level;
 
     constructor ()
     {
@@ -26,30 +28,10 @@ export class Game extends Scene
         this.background = this.add.image(512, 384, 'background');
         this.background.setAlpha(0.5);
 
-        const level = [
-            [ 85, 70, 70, 70, 70, 70, 70, 70, 70, 85 ],
-            [ 85, 1,  1,  1,  1,  1,  1,  1,  1,  85 ],
-            [ 85, 1,  70, 1,  70, 70, 1,  70, 1,  85 ],
-            [ 85, 1,  1,  1,  1,  1,  1,  1,  1,  85 ],
-            [ 85, 1,  70, 1,  70, 70, 1,  70, 1,  85 ],
-            [ 85, 1,  1,  1,  1,  1,  1,  1,  1,  85 ],
-            [ 85, 1,  70, 1,  70, 70, 1,  70, 1,  85 ],
-            [ 85, 1,  1,  1,  1,  1,  1,  1,  1,  85 ],
-            [ 85, 1,  1,  1,  1,  1,  1,  1,  1,  85 ],
-            [ 70, 70, 70, 70, 70, 70, 70, 70, 70, 70 ],
-        ]
+        this.level = new Level(this);
+        this.level.create();
 
-        const map = this.make.tilemap({data: level, tileWidth: 16, tileHeight: 16});
-        const tiles = map.addTilesetImage('tiles');
-
-        if (!tiles) {
-            console.error('Failed to load tileset!');
-            return;
-        }
-
-        const layer = map.createLayer(0, tiles, 0, 0);
-
-        this.player = new Player(this, 1, 1, level);
+        this.player = new Player(this, 1, 1, this.level.getLevelData());
 
         this.input.once('pointerdown', () => {
             this.scene.start('GameOver');
