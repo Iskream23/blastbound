@@ -51,11 +51,6 @@ export class Player extends Phaser.GameObjects.Sprite {
             return;
         }
 
-        // Check bounds (optional - adjust based on your level size)
-        /*if (newGridX < 1 || newGridX > 8 || newGridY < 1 || newGridY > 8) {
-            return;
-        }*/
-
         if (this.canMoveTo(newGridX, newGridY)) {
             this.moveToGrid(newGridX, newGridY);
         }
