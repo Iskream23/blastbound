@@ -1,11 +1,15 @@
 import Phaser from "phaser";
+import { Bomb } from "./Bomb";
 
 export class Player extends Phaser.GameObjects.Sprite {
     private gridX: number;
     private gridY: number;
     private isMoving: boolean = false;
     private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
-    private levelData: number[][]
+    private levelData: number[][];
+    private spaceKey: Phaser.Input.Keyboard.Key;
+    private bombs: Bomb[] = [];
+    private maxBombs: number = 1;
 
     constructor(scene: Phaser.Scene, gridX: number, gridY: number, levelData: number[][]) {
         const pixelX = (gridX * 16) + 8;
@@ -20,6 +24,7 @@ export class Player extends Phaser.GameObjects.Sprite {
         this.levelData = levelData;
 
         this.cursors = scene.input.keyboard?.createCursorKeys()!;
+        this.spaceKey = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)!;
 
         if (!scene.anims.exists('idle')) {
             scene.anims.create({
@@ -35,6 +40,11 @@ export class Player extends Phaser.GameObjects.Sprite {
 
     update() {
         if (this.isMoving) return;
+
+        if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+            console.log("bomb placed");
+            this.placeBomb();
+        }
 
         let newGridX = this.gridX;
         let newGridY = this.gridY;
@@ -64,9 +74,14 @@ export class Player extends Phaser.GameObjects.Sprite {
         }
 
         const tileValue = this.levelData[gridY][gridX];
+
+        // Check if there's a bomb at this position
+        const hasBomb = this.bombs.some(bomb => 
+            bomb.getGridX() === gridX && bomb.getGridY() === gridY
+        );
         
-        // Allow movement on empty spaces (1) but block walls (2) and borders (70, 85)
-        return tileValue === 1;
+        // Allow movement on empty spaces (1) but block walls (2) and borders (70, 85) and bombs
+        return tileValue === 1 && !hasBomb;
     }
 
     private moveToGrid(newGridX: number, newGridY: number) {
@@ -87,5 +102,36 @@ export class Player extends Phaser.GameObjects.Sprite {
                 this.isMoving = false;
             }
         });
+    }
+
+    private placeBomb(): void {
+        // Check if we can place more bombs
+        if (this.bombs.length >= this.maxBombs) {
+            return;
+        }
+
+        // Check if there's already a bomb at current position
+        const hasBomb = this.bombs.some(bomb => 
+            bomb.getGridX() === this.gridX && bomb.getGridY() === this.gridY
+        );
+
+        if (!hasBomb) {
+            const bomb = new Bomb(this.scene, this.gridX, this.gridY);
+            this.bombs.push(bomb);
+        }
+    }
+
+    private removeBomb(gridX: number, gridY: number): void {
+        this.bombs = this.bombs.filter(bomb => 
+            !(bomb.getGridX() === gridX && bomb.getGridY() === gridY)
+        );
+    }
+
+    getGridX(): number {
+        return this.gridX;
+    }
+
+    getGridY(): number {
+        return this.gridY;
     }
 }

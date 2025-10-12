@@ -33,7 +33,8 @@ export class Game extends Scene
 
         this.player = new Player(this, 1, 1, this.level.getLevelData());
 
-        this.input.once('pointerdown', () => {
+        // Listen for player death
+        this.events.on('player-hit', () => {
             this.scene.start('GameOver');
         });
     }
