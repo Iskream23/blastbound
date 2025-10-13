@@ -33,6 +33,11 @@ export class Game extends Scene
 
         this.player = new Player(this, 1, 1, this.level.getLevelData());
 
+        // Listen for bomb explosions
+        this.events.on('bomb-exploded', (gridX: number, gridY: number) => {
+            this.player.removeBomb(gridX, gridY);
+        });
+
         // Listen for player death
         this.events.on('player-hit', () => {
             this.scene.start('GameOver');

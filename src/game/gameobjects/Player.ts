@@ -121,7 +121,7 @@ export class Player extends Phaser.GameObjects.Sprite {
         }
     }
 
-    private removeBomb(gridX: number, gridY: number): void {
+    public removeBomb(gridX: number, gridY: number): void {
         this.bombs = this.bombs.filter(bomb => 
             !(bomb.getGridX() === gridX && bomb.getGridY() === gridY)
         );
