@@ -1,9 +1,9 @@
 import { Router, type Request, type Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
-import { vorldAuth } from "@services/vorldAuth.js";
-import { asyncHandler } from "@utils/asyncHandler.js";
-import { authenticateUser } from "@middleware/authenticate.js";
+import { vorldAuth } from "../services/vorldAuth.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { authenticateUser } from "../middleware/authenticate.js";
 
 const router = Router();
 

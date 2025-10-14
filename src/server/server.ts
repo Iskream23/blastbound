@@ -3,10 +3,10 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-import { env } from "@config/env.js";
-import { authRouter } from "@routes/auth.routes.js";
-import { userRouter } from "@routes/user.routes.js";
-import { errorHandler } from "@middleware/errorHandler.js";
+import { env } from "./config/env.js";
+import { authRouter } from "./routes/auth.routes.js";
+import { userRouter } from "./routes/user.routes.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 

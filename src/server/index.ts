@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import app from "./server.js";
-import { env } from "@config/env.js";
+import { env } from "./config/env.js";
 
 const port = env.PORT;
 

@@ -9,7 +9,6 @@ const envSchema = z.object({
     .transform((value: string) => Number.parseInt(value, 10))
     .pipe(z.number().positive().default(4000)),
   VORLD_APP_ID: z.string().min(1, "VORLD_APP_ID is required"),
-  VORLD_APP_SECRET: z.string().min(1, "VORLD_APP_SECRET is required"),
   CLIENT_ORIGIN: z
     .string()
     .default("http://localhost:3000")
@@ -25,7 +24,6 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse({
   PORT: process.env.PORT ?? "4000",
   VORLD_APP_ID: process.env.VORLD_APP_ID,
-  VORLD_APP_SECRET: process.env.VORLD_APP_SECRET,
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN,
   LOG_LEVEL: process.env.LOG_LEVEL,
 });
