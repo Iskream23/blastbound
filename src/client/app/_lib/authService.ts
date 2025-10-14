@@ -3,8 +3,10 @@
 import Cookies from "js-cookie";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:4000";
+const VORLD_BASE_URL = process.env.NEXT_PUBLIC_VORLD_SERVER_URL ?? "http://localhost:4000";
 const TOKEN_KEY = "vorld_access_token";
 const REFRESH_TOKEN_KEY = "vorld_refresh_token";
+const VORD_APP_ID = process.env.NEXT_PUBLIC_VORLD_APP_ID || "";
 
 export type VorldUser = {
   id: string;
@@ -78,18 +80,51 @@ export class VorldAuthService {
   }
 
   async getProfile(): Promise<AuthResult<{ profile: VorldUser }>> {
-    const user = this.getUser();
-    if (!user) {
+    try {
+      const token = this.getAccessToken();
+
+      if (!token) {
+        return {
+          success: false,
+          error: "No access token found. Please login again.",
+        }
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        }
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || payload.sucess === false) {
+        return {
+          success: false,
+           error: payload?.error ?? "Failed to fetch profile",
+        }
+      }
+
+       if (payload.profile) {
+        const refreshToken = this.getRefreshToken();
+        if (refreshToken) {
+          this.setTokens(token, refreshToken, payload.profile);
+        }
+      }     
+
+      return {
+        success: true,
+        data: { profile: payload.profile },
+      };
+    } catch (error) {
+      console.error("[AuthService] Profile fetch error:", error);
       return {
         success: false,
-        error: "No user data found. Please login again.",
+        error: error instanceof Error ? error.message : "Failed to fetch profile",
       };
     }
-
-    return {
-      success: true,
-      data: { profile: user },
-    };
   }
 
   async logout(): Promise<AuthResult<{ message: string }>> {
@@ -102,10 +137,11 @@ export class VorldAuthService {
           data: { message: "Already logged out" },
         };
       }
-
-      const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+      const response = await fetch(`${VORLD_BASE_URL}/api/auth/logout`, {
         method: "POST",
         headers: {
+          "x-vorld-app-id": VORD_APP_ID|| "",
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });

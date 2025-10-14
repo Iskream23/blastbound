@@ -14,6 +14,5 @@ export async function sha256(message: string): Promise<string> {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 
-  console.log("hashDex", hashHex);
   return hashHex;
 }

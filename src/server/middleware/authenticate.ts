@@ -4,7 +4,6 @@ import { vorldAuth } from "../services/vorldAuth.js";
 
 export const authenticateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // TODO: How to authenticate user account
     const token = req.headers.authorization?.replace("Bearer ", "");
 
     if (!token) {
@@ -15,9 +14,9 @@ export const authenticateUser = async (req: Request, res: Response, next: NextFu
       });
     }
 
-    const result = await vorldAuth.verifyToken(token);
+    const result = await vorldAuth.getUserProfile(token);
 
-    if (!result.success || !result.valid) {
+    if (!result.success) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
         success: false,
         message: "Invalid or expired token",
@@ -25,7 +24,13 @@ export const authenticateUser = async (req: Request, res: Response, next: NextFu
       });
     }
 
-    req.user = result.user;
+    // Extract user info from profile
+    const profile = result.profile as any;
+    req.user = {
+      id: profile.id || profile.userId,
+      email: profile.email,
+      role: profile.role,
+    };
     req.token = token;
     next();
   } catch (error) {
@@ -82,6 +87,6 @@ export const rateLimitByUser = (maxRequests = 100, windowMs = 15 * 60 * 1000) =>
 
     filtered.push(now);
     requests.set(userId, filtered);
-    next();
+    next(); 
   };
 };
