@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
-import { vorldAuth } from "@services/vorldAuth.js";
 import { StatusCodes } from "http-status-codes";
+import { vorldAuth } from "../services/vorldAuth.js";
 
 export const authenticateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {

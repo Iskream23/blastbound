@@ -8,10 +8,12 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import PortalBackground from "./PortalBackground";
 import LoginCard from "./LoginCard";
 import { socialProviders } from "../_providers/socialProviders";
 import type { FormStatus, PortalFormValues, Ripple } from "../_types/types";
+import { authService } from "../_lib/authService";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:4000";
 
@@ -21,6 +23,7 @@ type AuthTokens = {
 };
 
 const LoginPage = () => {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [ripples, setRipples] = useState<Ripple[]>([]);
@@ -34,9 +37,17 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (tokens) {
-      sessionStorage.setItem("blastbound-auth", JSON.stringify(tokens));
+      const user = {
+        id: "",
+        email: formValues.email,
+        username: formValues.email.split("@")[0],
+        verified: true,
+        ...profile,
+      };
+      authService.setTokens(tokens.token, tokens.refreshToken, user as any);
+      router.push("/profile");
     }
-  }, [tokens]);
+  }, [tokens, router, formValues.email, profile]);
 
   const updateStatus = useCallback((message: string, tone: FormStatus["tone"]) => {
     setStatus({ message, tone });
@@ -103,10 +114,15 @@ const LoginPage = () => {
               refreshToken: payload.refreshToken,
             };
             setTokens(authTokens);
+            
+            // Store user data from OTP response
+            if (payload.user) {
+              setProfile(payload.user);
+            }
+            
             updateStatus("Access granted. Neural link stabilized.", "success");
             setRequiresOtp(false);
             setOtp("");
-            await fetchProfile(payload.token);
           }
           return;
         }
@@ -131,8 +147,13 @@ const LoginPage = () => {
             refreshToken: payload.refreshToken,
           };
           setTokens(authTokens);
+          
+          // Store user data from login response
+          if (payload.user) {
+            setProfile(payload.user);
+          }
+          
           updateStatus("Access granted. Neural link stabilized.", "success");
-          await fetchProfile(payload.token);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Authentication failed";
@@ -216,32 +237,6 @@ const LoginPage = () => {
           onFieldChange={handleFieldChange}
           onOtpChange={setOtp}
         />
-
-        {statusSummary && (
-          <aside className="portal-status-panel" aria-live="polite">
-            <h2 className="portal-status-title">Session Diagnostics</h2>
-            <dl className="portal-status-grid">
-              <div>
-                <dt>Access Token</dt>
-                <dd>{statusSummary.token}</dd>
-              </div>
-              <div>
-                <dt>Refresh Token</dt>
-                <dd>{statusSummary.refreshToken}</dd>
-              </div>
-              {statusSummary.profile && (
-                <div>
-                  <dt>Profile Snapshot</dt>
-                  <dd>
-                    <pre className="portal-status-pre">
-                      {JSON.stringify(statusSummary.profile, null, 2)}
-                    </pre>
-                  </dd>
-                </div>
-              )}
-            </dl>
-          </aside>
-        )}
       </main>
     </div>
   );
