@@ -102,7 +102,7 @@ export default function ProfilePage() {
           <header className="profile-header">
             <div className="profile-header-top">
               <div>
-                <span className="portal-kicker">SYSTEM PROTOCOL 7.2</span>
+                <span className="portal-kicker">BLASTBOUND</span>
                 <h1 className="portal-title profile-title">Profile</h1>
               </div>
               <button

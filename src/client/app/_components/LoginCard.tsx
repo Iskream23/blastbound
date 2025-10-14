@@ -49,10 +49,10 @@ const LoginCard = ({
     )}
 
     <header className="portal-header">
-      <span className="portal-kicker">SYSTEM PROTOCOL 7.2</span>
-      <h1 className="portal-title">ACCESS PORTAL</h1>
+      <span className="portal-kicker text-center">Welcome to the hell</span>
+      <h1 className="portal-title">BlastBound</h1>
       <p className="portal-subtitle">
-        Sync your neural credentials to enter the Vorld mainframe.
+        Sync your credentials Vorld to enter the Blastbound.
       </p>
     </header>
 

@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
 import { vorldAuth } from "../services/vorldAuth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { authenticateUser } from "../middleware/authenticate.js";
+import { authenticateUser, rateLimitByUser } from "../middleware/authenticate.js";
 
 const router = Router();
 
@@ -32,7 +32,7 @@ router.post(
     }
 
     res.json(result);
-  }),
+  })
 );
 
 router.post(
@@ -46,7 +46,7 @@ router.post(
     }
 
     res.json(result);
-  }),
+  })
 );
 
 router.post(
@@ -60,7 +60,7 @@ router.post(
     }
 
     res.json(result);
-  }),
+  })
 );
 
 router.get(
@@ -76,28 +76,40 @@ router.get(
       });
     }
 
-    const result = await vorldAuth.verifyToken(token);
+    // Use getUserProfile to validate the token since /auth/verify doesn't exist
+    const result = await vorldAuth.getUserProfile(token);
 
     if (!result.success) {
-      return res.status(StatusCodes.UNAUTHORIZED).json(result);
+      return res.status(StatusCodes.UNAUTHORIZED).json({
+        success: false,
+        valid: false,
+        error: result.error,
+      });
     }
 
-    res.json(result);
-  }),
+    // Extract user info from profile
+    const profile = result.profile as any;
+    res.json({
+      success: true,
+      valid: true,
+      user: {
+        id: profile.id || profile.userId,
+        email: profile.email,
+        role: profile.role,
+      },
+    });
+  })
 );
 
-router.post(
-  "/logout",
+router.get(
+  "/profile",
   authenticateUser,
+  rateLimitByUser(60, 10 * 60 * 1000),
   asyncHandler(async (req: Request, res: Response) => {
-    const token = req.token!;
-    const result = await vorldAuth.logout(token);
-
-    if (!result.success) {
-      return res.status(StatusCodes.BAD_REQUEST).json(result);
-    }
-
-    res.json(result);
+    res.json({
+      success: true,
+      profile: req.user,
+    });
   }),
 );
 
