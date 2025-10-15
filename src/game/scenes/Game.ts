@@ -42,6 +42,15 @@ export class Game extends Scene
         this.events.on('player-hit', () => {
             this.scene.start('GameOver');
         });
+
+        /*
+        this.events.on('crate-destroyed', (gridX: number, gridY: number) => {
+            // Random chance to spawn a power-up
+            if (Math.random() < 0.3) { // 30% chance
+                // Create power-up at crate position
+                // this.createPowerUp(gridX, gridY);
+            }
+        });*/
     }
 
     update()

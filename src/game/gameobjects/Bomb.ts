@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { Crate } from './Crate';
 
 export class Bomb extends Phaser.GameObjects.Sprite {
     private gridX: number;
@@ -92,10 +93,27 @@ export class Bomb extends Phaser.GameObjects.Sprite {
     private checkExplosionPath(gridX: number, gridY: number): boolean {
         const level = (this.scene as any).level;
         const tileValue = level.getTileAt(gridX, gridY);
+
+        // Check for crate
+        const crate = level.getCrateAt(gridX, gridY);
+        if (crate) {
+            // Destroy the crate but stop the explosion
+            this.destroyCrate(crate);
+            return false; // Explosion stops at crate
+        }
         
         // Explosion can pass through empty spaces (1)
         // but is blocked by walls (70, 85, 2)
         return tileValue === 1;
+    }
+
+    private destroyCrate(crate: Crate): void {
+        const level = (this.scene as any).level;
+        crate.destroy();
+        level.removeCrate(crate);
+        
+        // Emit event for crate destruction (useful for scoring)
+        this.scene.events.emit('crate-destroyed', crate.getGridX(), crate.getGridY());
     }
 
     private createExplosion(gridX: number, gridY: number): void {
@@ -115,6 +133,13 @@ export class Bomb extends Phaser.GameObjects.Sprite {
                 explosion.destroy();
             }
         });
+
+        // Check for crate at explosion position (for the center of bomb)
+        const level = (this.scene as any).level;
+        const crate = level.getCrateAt(gridX, gridY);
+        if (crate) {
+            this.destroyCrate(crate);
+        }
 
         // Check for player collision
         const player = (this.scene as any).player;

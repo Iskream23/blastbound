@@ -79,9 +79,13 @@ export class Player extends Phaser.GameObjects.Sprite {
         const hasBomb = this.bombs.some(bomb => 
             bomb.getGridX() === gridX && bomb.getGridY() === gridY
         );
+
+        // Check if there's a crate at this position
+        const level = (this.scene as any).level;
+        const hasCrate = level.hasCrateAt(gridX, gridY);
         
         // Allow movement on empty spaces (1) but block walls (2) and borders (70, 85) and bombs
-        return tileValue === 1 && !hasBomb;
+        return tileValue === 1 && !hasBomb && !hasCrate;
     }
 
     private moveToGrid(newGridX: number, newGridY: number) {
