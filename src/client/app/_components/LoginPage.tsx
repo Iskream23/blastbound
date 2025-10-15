@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   FormEvent,
@@ -8,12 +8,15 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import PortalBackground from "./PortalBackground";
 import LoginCard from "./LoginCard";
 import { socialProviders } from "../_providers/socialProviders";
 import type { FormStatus, PortalFormValues, Ripple } from "../_types/types";
+import { authService } from "../_lib/authService";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:4000";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:4000";
 
 type AuthTokens = {
   token: string;
@@ -21,11 +24,15 @@ type AuthTokens = {
 };
 
 const LoginPage = () => {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const [rippleCount, setRippleCount] = useState(0);
-  const [formValues, setFormValues] = useState<PortalFormValues>({ email: "", password: "" });
+  const [formValues, setFormValues] = useState<PortalFormValues>({
+    email: "",
+    password: "",
+  });
   const [otp, setOtp] = useState("");
   const [requiresOtp, setRequiresOtp] = useState(false);
   const [status, setStatus] = useState<FormStatus | null>(null);
@@ -34,18 +41,30 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (tokens) {
-      sessionStorage.setItem("blastbound-auth", JSON.stringify(tokens));
+      const user = {
+        id: "",
+        email: formValues.email,
+        username: formValues.email.split("@")[0],
+        verified: true,
+        ...profile,
+      };
+      authService.setTokens(tokens.token, tokens.refreshToken, user as any);
+      router.push("/profile");
     }
-  }, [tokens]);
+  }, [tokens, router, formValues.email, profile]);
 
-  const updateStatus = useCallback((message: string, tone: FormStatus["tone"]) => {
-    setStatus({ message, tone });
-  }, []);
+  const updateStatus = useCallback(
+    (message: string, tone: FormStatus["tone"]) => {
+      setStatus({ message, tone });
+    },
+    []
+  );
 
   const handleApiResponse = useCallback(async (response: Response) => {
     const payload = await response.json();
     if (!response.ok || payload.success === false) {
-      const errorMessage = payload?.error ?? payload?.message ?? "Authentication failed";
+      const errorMessage =
+        payload?.error ?? payload?.message ?? "Authentication failed";
       throw new Error(errorMessage);
     }
     return payload as {
@@ -74,7 +93,7 @@ const LoginPage = () => {
         console.warn("Profile fetch failed", error);
       }
     },
-    [handleApiResponse],
+    [handleApiResponse]
   );
 
   const handleSubmit = useCallback(
@@ -103,10 +122,15 @@ const LoginPage = () => {
               refreshToken: payload.refreshToken,
             };
             setTokens(authTokens);
+
+            // Store user data from OTP response
+            if (payload.user) {
+              setProfile(payload.user);
+            }
+
             updateStatus("Access granted. Neural link stabilized.", "success");
             setRequiresOtp(false);
             setOtp("");
-            await fetchProfile(payload.token);
           }
           return;
         }
@@ -114,14 +138,20 @@ const LoginPage = () => {
         const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: formValues.email, password: formValues.password }),
+          body: JSON.stringify({
+            email: formValues.email,
+            password: formValues.password,
+          }),
         });
 
         const payload = await handleApiResponse(response);
 
         if (payload.requiresOTP) {
           setRequiresOtp(true);
-          updateStatus("One-time cipher requested. Enter the temporal code sent to you.", "success");
+          updateStatus(
+            "One-time cipher requested. Enter the temporal code sent to you.",
+            "success"
+          );
           return;
         }
 
@@ -131,11 +161,17 @@ const LoginPage = () => {
             refreshToken: payload.refreshToken,
           };
           setTokens(authTokens);
+
+          // Store user data from login response
+          if (payload.user) {
+            setProfile(payload.user);
+          }
+
           updateStatus("Access granted. Neural link stabilized.", "success");
-          await fetchProfile(payload.token);
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Authentication failed";
+        const message =
+          error instanceof Error ? error.message : "Authentication failed";
         updateStatus(message, "error");
       } finally {
         setIsLoading(false);
@@ -150,7 +186,7 @@ const LoginPage = () => {
       otp,
       requiresOtp,
       updateStatus,
-    ],
+    ]
   );
 
   const handleButtonClick = useCallback(
@@ -168,22 +204,27 @@ const LoginPage = () => {
       setRipples((previous) => [...previous, { id: newId, x, y }]);
 
       setTimeout(() => {
-        setRipples((previous) => previous.filter((ripple) => ripple.id !== newId));
+        setRipples((previous) =>
+          previous.filter((ripple) => ripple.id !== newId)
+        );
       }, 600);
     },
-    [isLoading, rippleCount],
+    [isLoading, rippleCount]
   );
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword((previous) => !previous);
   }, []);
 
-  const handleFieldChange = useCallback((field: keyof PortalFormValues, value: string) => {
-    setFormValues((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-  }, []);
+  const handleFieldChange = useCallback(
+    (field: keyof PortalFormValues, value: string) => {
+      setFormValues((previous) => ({
+        ...previous,
+        [field]: value,
+      }));
+    },
+    []
+  );
 
   const statusSummary = useMemo(() => {
     if (!tokens) {
@@ -216,32 +257,6 @@ const LoginPage = () => {
           onFieldChange={handleFieldChange}
           onOtpChange={setOtp}
         />
-
-        {statusSummary && (
-          <aside className="portal-status-panel" aria-live="polite">
-            <h2 className="portal-status-title">Session Diagnostics</h2>
-            <dl className="portal-status-grid">
-              <div>
-                <dt>Access Token</dt>
-                <dd>{statusSummary.token}</dd>
-              </div>
-              <div>
-                <dt>Refresh Token</dt>
-                <dd>{statusSummary.refreshToken}</dd>
-              </div>
-              {statusSummary.profile && (
-                <div>
-                  <dt>Profile Snapshot</dt>
-                  <dd>
-                    <pre className="portal-status-pre">
-                      {JSON.stringify(statusSummary.profile, null, 2)}
-                    </pre>
-                  </dd>
-                </div>
-              )}
-            </dl>
-          </aside>
-        )}
       </main>
     </div>
   );

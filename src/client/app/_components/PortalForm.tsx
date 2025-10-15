@@ -49,7 +49,7 @@ const PortalForm = ({
     <form className="portal-form" onSubmit={onSubmit} aria-busy={isLoading}>
       <div className="portal-fieldset">
         <label className="portal-label" htmlFor="email">
-          Identifier
+          Email
         </label>
         <div className="portal-input">
           <span className="portal-icon" aria-hidden="true">
@@ -68,7 +68,7 @@ const PortalForm = ({
             id="email"
             name="email"
             type="email"
-            placeholder="CITIZEN-ID // user@vorld.net"
+            placeholder="user@vorld.com"
             required
             className="portal-input-field"
             autoComplete="email"
@@ -80,7 +80,7 @@ const PortalForm = ({
 
       <div className="portal-fieldset">
         <label className="portal-label" htmlFor="password">
-          Cipher Key
+          Password
         </label>
         <div className="portal-input">
           <span className="portal-icon" aria-hidden="true">
@@ -233,8 +233,8 @@ const PortalForm = ({
           </span>
         </button>
       </div>
-
-      <div className="portal-divider" aria-hidden="true">
+      {/* TODO: Setup connect wallet in the future  */}
+      {/* <div className="portal-divider" aria-hidden="true">
         <span />
         <p>or connect with</p>
         <span />
@@ -247,7 +247,7 @@ const PortalForm = ({
             {provider.icon}
           </button>
         ))}
-      </div>
+      </div> */}
     </form>
   );
 };
