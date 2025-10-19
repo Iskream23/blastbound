@@ -23,6 +23,7 @@ export class Game extends Scene
     create ()
     {
         this.camera = this.cameras.main;
+        //this.camera.centerOn(0, 0);
         this.camera.setBackgroundColor(0x000000);
 
         this.background = this.add.image(512, 384, 'background');
@@ -31,7 +32,7 @@ export class Game extends Scene
         this.level = new Level(this);
         this.level.create();
 
-        this.player = new Player(this, 1, 1, this.level.getLevelData());
+        this.player = new Player(this, 5, 1, this.level.getLevelData());
 
         // Listen for bomb explosions
         this.events.on('bomb-exploded', (gridX: number, gridY: number) => {
@@ -58,5 +59,13 @@ export class Game extends Scene
         if (this.player) {
             this.player.update();
         }
+    }
+
+    shutdown()
+    {
+        // Clean up event listeners
+        this.events.off('bomb-exploded');
+        this.events.off('player-hit');
+        this.events.off('crate-destroyed');
     }
 }
