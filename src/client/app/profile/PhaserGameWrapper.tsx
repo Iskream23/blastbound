@@ -7,22 +7,47 @@ interface PhaserGameWrapperProps {
   userProfile: VorldUser;
 }
 
+const GLOBAL_GAME_KEY = "__blastboundGame";
+
 export default function PhaserGameWrapper({ userProfile }: PhaserGameWrapperProps) {
   const gameContainerRef = useRef<HTMLDivElement>(null);
-  const gameInstanceRef = useRef<any>(null);
+  const isStartingRef = useRef(false);
 
   useEffect(() => {
-    let mounted = true;
+    if (typeof window === "undefined") {
+      return;
+    }
 
     const loadGame = async () => {
-      if (!gameContainerRef.current || !mounted) return;
+      if (!gameContainerRef.current) return;
+
+      const currentGame = (window as any)[GLOBAL_GAME_KEY];
+      if (currentGame || isStartingRef.current) {
+        return;
+      }
+
+      isStartingRef.current = true;
 
       try {
+        // Clear any existing canvas elements in the container
+        const container = gameContainerRef.current;
+        while (container.firstChild) {
+          container.removeChild(container.firstChild);
+        }
+
         // Dynamically import your game
         const { default: StartGame } = await import("../../../game/main");
         
         // Start the game with the container ID
-        gameInstanceRef.current = StartGame("game-container");
+        const createdGame = StartGame("game-container");
+        if (createdGame?.canvas) {
+          const focusCanvas = () => createdGame.canvas?.focus();
+          createdGame.canvas.setAttribute("tabindex", "0");
+          createdGame.canvas.addEventListener("pointerdown", focusCanvas);
+          createdGame.canvas.focus();
+          (createdGame as any).__focusHandler = focusCanvas;
+        }
+        (window as any)[GLOBAL_GAME_KEY] = createdGame;
         
         // Optionally pass user data to your game via global object or other method
         if (window) {
@@ -34,20 +59,28 @@ export default function PhaserGameWrapper({ userProfile }: PhaserGameWrapperProp
         }
       } catch (error) {
         console.error("Failed to load game:", error);
+      } finally {
+        isStartingRef.current = false;
       }
     };
 
     loadGame();
 
     return () => {
-      mounted = false;
-      
-      // Clean up the game instance
-      if (gameInstanceRef.current) {
-        // If your StartGame returns a Phaser.Game instance
-        if (gameInstanceRef.current.destroy) {
-          gameInstanceRef.current.destroy(true);
+      // Only clean up when component unmounts
+      const currentGame = (window as any)[GLOBAL_GAME_KEY];
+      if (currentGame) {
+        try {
+          if (currentGame.canvas && (currentGame as any).__focusHandler) {
+            currentGame.canvas.removeEventListener("pointerdown", (currentGame as any).__focusHandler);
+          }
+          if (currentGame.destroy) {
+            currentGame.destroy(true);
+          }
+        } catch (error) {
+          console.error("Error destroying game:", error);
         }
+        (window as any)[GLOBAL_GAME_KEY] = null;
         
         // Clean up global user data
         if (window && (window as any).currentUser) {
@@ -55,14 +88,20 @@ export default function PhaserGameWrapper({ userProfile }: PhaserGameWrapperProp
         }
       }
     };
-  }, [userProfile]);
+  }, [userProfile.username, userProfile.email, userProfile.id]);
 
   return (
     <div 
       id="game-container" 
       ref={gameContainerRef}
       className="phaser-game-container"
-      
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        width: "100%",
+        height: "100vh"
+      }}
     />
   );
 }

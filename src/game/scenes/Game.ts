@@ -4,10 +4,10 @@ import { Level } from '../gameobjects/Level';
 
 export class Game extends Scene
 {
-    camera: Phaser.Cameras.Scene2D.Camera;
-    background: Phaser.GameObjects.Image;
-    player: Player;
-    level: Level;
+    camera!: Phaser.Cameras.Scene2D.Camera;
+    background!: Phaser.GameObjects.Image; 
+    player!: Player;
+    level!: Level;
 
     constructor ()
     {

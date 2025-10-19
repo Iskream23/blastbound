@@ -5,8 +5,8 @@ export class Level {
     private scene: Scene;
     private crates: Crate[] = [];
     private levelData: number[][];
-    public map: Phaser.Tilemaps.Tilemap;
-    public layer: Phaser.Tilemaps.TilemapLayer | null;
+    public map: Phaser.Tilemaps.Tilemap | null = null;
+    public layer: Phaser.Tilemaps.TilemapLayer | null = null;
 
     constructor(scene: Scene) {
         this.scene = scene;
