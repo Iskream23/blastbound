@@ -62,6 +62,7 @@ export default function PhaserGameWrapper({ userProfile }: PhaserGameWrapperProp
       id="game-container" 
       ref={gameContainerRef}
       className="phaser-game-container"
+      
     />
   );
 }
