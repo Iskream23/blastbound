@@ -3,10 +3,8 @@ import { Scene, GameObjects } from 'phaser';
 export class MainMenu extends Scene
 {
     background!: GameObjects.Image;
-    logo!: GameObjects.Image;
     title!: GameObjects.Text;
     instructions!: GameObjects.Text;
-    instructions2!: GameObjects.Text;
 
     constructor ()
     {
@@ -19,9 +17,7 @@ export class MainMenu extends Scene
         const h = this.scale.height / 2;
         const fontsizeTitle = 16;
         
-        this.background = this.add.image(512, 384, 'background');
-
-        this.logo = this.add.image(512, 300, 'logo');
+        this.background = this.add.image(0, 0, 'background');
 
         this.title = this.add.text(w, h - fontsizeTitle, 'Blastbound', {
             fontFamily: 'PressStart2P', fontSize: fontsizeTitle, color: '#FFFFFF',
@@ -29,24 +25,18 @@ export class MainMenu extends Scene
             align: 'center'
         }).setOrigin(0.5).setAlpha(0);
 
-        this.instructions = this.add.text(w, h + 20, 'Arrow keys to move', {
-            fontFamily: 'PressStart2P', fontSize: 8, color: '#FADA5E',
-            align: 'center'
-        }).setOrigin(0.5).setAlpha(0);
-
-        this.instructions2 = this.add.text(w, h + 30, 'Spacebar to place bomb', {
-            fontFamily: 'PressStart2P', fontSize: 8, color: '#FADA5E',
+        this.instructions = this.add.text(w, h + 20, 'Press spacebar', {
+            fontFamily: 'PressStart2P', fontSize: 8, color: '#FFFFFF',
             align: 'center'
         }).setOrigin(0.5).setAlpha(0);
 
         this.textAnimationAtStart(this.title, 1000);
         this.textAnimationAtStart(this.instructions, 2000);
-        this.textAnimationAtStart(this.instructions2, 2200);
 
-        this.input.once('pointerdown', () => {
+        const spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
+        spaceKey.once('down', () => {
             this.scene.start('Game');
-
         });
     }
 
