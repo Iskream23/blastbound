@@ -36,6 +36,7 @@ export class Game extends Scene
 
         // Listen for bomb explosions
         this.events.on('bomb-exploded', (gridX: number, gridY: number) => {
+            this.camera.shake(500, 0.01);
             this.player.removeBomb(gridX, gridY);
         });
 
