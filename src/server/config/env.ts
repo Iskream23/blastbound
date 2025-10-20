@@ -19,6 +19,13 @@ const envSchema = z.object({
         .filter(Boolean),
     ),
   LOG_LEVEL: z.string().default("dev"),
+  // Arena Game Service Configuration
+  ARENA_SERVER_URL: z
+    .string()
+    .url()
+    .default("wss://airdrop-arcade.onrender.com"),
+  GAME_API_URL: z.string().url().default("https://arena.vorld.com/api"),
+  ARENA_GAME_ID: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse({
@@ -26,6 +33,9 @@ const parsed = envSchema.safeParse({
   VORLD_APP_ID: process.env.VORLD_APP_ID,
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN,
   LOG_LEVEL: process.env.LOG_LEVEL,
+  ARENA_SERVER_URL: process.env.ARENA_SERVER_URL,
+  GAME_API_URL: process.env.GAME_API_URL,
+  ARENA_GAME_ID: process.env.ARENA_GAME_ID,
 });
 
 if (!parsed.success) {
