@@ -26,16 +26,13 @@ export class Player extends Phaser.GameObjects.Sprite {
         this.cursors = scene.input.keyboard?.createCursorKeys()!;
         this.spaceKey = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)!;
 
-        if (!scene.anims.exists('idle')) {
-            scene.anims.create({
-                key: 'idle',
-                frames: scene.anims.generateFrameNumbers('player', {start: 60, end: 60}),
-                frameRate: 10,
-                repeat: 1
-            })
-        }
+        this.createAnim(this.scene, 'idle-top', 60, 60);
+        this.createAnim(this.scene, 'walking-top', 68, 69);
+        this.createAnim(this.scene, 'idle-down', 61, 61);
+        this.createAnim(this.scene, 'walking-down', 62, 63);
+        this.createAnim(this.scene, 'walking-right', 65, 66);
 
-        this.play('idle');
+        this.play('idle-down');
     }
 
     update() {
@@ -50,12 +47,18 @@ export class Player extends Phaser.GameObjects.Sprite {
         let newGridY = this.gridY;
 
         if (this.cursors.left.isDown) {
+            this.play('walking-right');
+            this.setFlipX(true);
             newGridX--;
         } else if (this.cursors.right.isDown) {
+            this.play('walking-right');
+            this.setFlipX(false);
             newGridX++;
         } else if (this.cursors.up.isDown) {
+            this.play('walking-top');
             newGridY--;
         } else if (this.cursors.down.isDown) {
+            this.play('walking-down');
             newGridY++;
         } else {
             return;
@@ -63,6 +66,17 @@ export class Player extends Phaser.GameObjects.Sprite {
 
         if (this.canMoveTo(newGridX, newGridY)) {
             this.moveToGrid(newGridX, newGridY);
+        }
+    }
+
+    private createAnim(scene: Phaser.Scene, animKey: string, start: number, end: number) {
+        if (!scene.anims.exists(animKey)) {
+            scene.anims.create({
+                key: animKey,
+                frames: scene.anims.generateFrameNumbers('player', {start: start, end: end}),
+                frameRate: 10,
+                repeat: 1
+            })
         }
     }
 
