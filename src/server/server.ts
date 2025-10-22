@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import { env } from "./config/env.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { userRouter } from "./routes/user.routes.js";
+import { arenaRouter } from "./routes/arena.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -41,6 +42,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
+app.use("/api/arena", arenaRouter);
 
 app.use(errorHandler);
 
