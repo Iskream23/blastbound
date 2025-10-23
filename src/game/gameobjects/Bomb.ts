@@ -84,7 +84,7 @@ export class Bomb extends Phaser.GameObjects.Sprite {
         }
 
         // Emit explosion event
-        this.scene.events.emit('bomb-exploded', this.gridX, this.gridY);
+        this.scene.events.emit('bomb-exploded', this.gridX, this.gridY, this.explosionRange);
 
         // Destroy the bomb
         this.destroy();
@@ -145,6 +145,16 @@ export class Bomb extends Phaser.GameObjects.Sprite {
         const player = (this.scene as any).player;
         if (player && player.getGridX() === gridX && player.getGridY() === gridY) {
             this.scene.events.emit('player-hit');
+        }
+
+        // Check for enemy collision
+        const enemies = (this.scene as any).enemies;
+        if (enemies) {
+            enemies.forEach((enemy: any) => {
+                if (enemy && enemy.getGridX() === gridX && enemy.getGridY() === gridY) {
+                    this.scene.events.emit('enemy-hit', enemy);
+                }
+            });
         }
     }
 
