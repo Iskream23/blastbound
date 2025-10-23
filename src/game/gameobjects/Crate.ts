@@ -22,7 +22,9 @@ export class Crate extends Phaser.GameObjects.Sprite {
             targets: this,
             scale: { from: 1, to: 0 },
             alpha: { from: 1, to: 0 },
+            angle: { from: this.angle, to: this.angle + 180 }, // Spin while shrinking
             duration: 300,
+            ease: 'Power2.easeIn',
             onComplete: () => {
                 super.destroy();
             }
