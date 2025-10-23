@@ -10,6 +10,7 @@ export class Game extends Scene
     player!: Player;
     level!: Level;
     enemies!: Enemy[];
+    isGameOver: boolean = false;
 
     constructor ()
     {
@@ -41,6 +42,9 @@ export class Game extends Scene
         this.enemies = [];
         this.createEnemies();
 
+        // Reset game over flag
+        this.isGameOver = false
+
         // Listen for bomb explosions
         this.events.on('bomb-exploded', (gridX: number, gridY: number) => {
             this.camera.shake(500, 0.01);
@@ -54,7 +58,20 @@ export class Game extends Scene
 
         // Listen for player death
         this.events.on('player-hit', () => {
-            this.scene.start('GameOver');
+            if (!this.isGameOver) {
+                this.isGameOver = true;
+                
+                // Tint the player sprite red
+                this.player.setTint(0xff0000);
+
+                // Optional: Flash effect
+                this.camera.flash(500, 255, 0, 0);
+                
+                // Delay before transitioning to game over
+                this.time.delayedCall(1500, () => {
+                    this.scene.start('GameOver');
+                });
+            }
         });
 
         /*

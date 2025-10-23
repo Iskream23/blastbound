@@ -140,7 +140,38 @@ export class Enemy extends Phaser.GameObjects.Sprite{
         if (this.moveTimer) {
             this.moveTimer.destroy();
         }
-        super.destroy(fromScene);
+        
+        this.setTint(0xff0000);
+        this.addBloodEffect(fromScene);
+    }
+
+    private addBloodEffect(fromScene?: boolean): void {
+        // Create some debris particles for better visual feedback
+        const particleCount = 4;
+        const colors = [0x8B0000, 0xDC143C, 0xB22222];
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = this.scene.add.rectangle(
+                this.x + (Math.random() - 0.5) * 8,
+                this.y + (Math.random() - 0.5) * 8,
+                8, 8,
+                colors[Math.floor(Math.random() * colors.length)]
+            );
+
+            this.scene.tweens.add({
+                targets: particle,
+                x: particle.x + (Math.random() - 0.5) * 30,
+                y: particle.y + (Math.random() - 0.5) * 30,
+                alpha: { from: 1, to: 0 },
+                scale: { from: 1, to: 0 },
+                duration: 1000 + Math.random() * 200,
+                ease: 'Power2.easeOut',
+                onComplete: () => {
+                    super.destroy(fromScene);
+                    particle.destroy();
+                }
+            });
+        }
     }
 
     getGridX(): number {
