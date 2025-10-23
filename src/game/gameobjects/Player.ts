@@ -152,4 +152,8 @@ export class Player extends Phaser.GameObjects.Sprite {
     getGridY(): number {
         return this.gridY;
     }
+
+    public getBombs(): Bomb[] {
+        return this.bombs;
+    }
 }

@@ -9,10 +9,11 @@ export class Enemy extends Phaser.GameObjects.Sprite{
     private currentDirection: number = 1; // 1 for right/down, -1 for left/up
     private moveTimer: Phaser.Time.TimerEvent;
     private moveDelay: number = 1000; // Move every 1 second
+    private moveTween: Phaser.Tweens.Tween | null = null; // Store reference to active tween
 
     constructor(scene: Phaser.Scene, gridX: number, gridY: number, levelData: number[][], moveDirection: 'horizontal' | 'vertical' = 'horizontal') {
         const pixelX = (gridX * 16) + 8;
-        const pixelY = (gridX * 16) + 8;
+        const pixelY = (gridY * 16) + 8;
         
         super(scene, pixelX, pixelY, 'enemy');
         scene.add.existing(this);
@@ -63,8 +64,6 @@ export class Enemy extends Phaser.GameObjects.Sprite{
         } else {
             // Reverse direction if we hit an obstacle
             this.currentDirection *= -1;
-            // Try moving in the new direction immediately
-            this.attemptMove();
         }
     }
 
@@ -78,15 +77,14 @@ export class Enemy extends Phaser.GameObjects.Sprite{
         const tileValue = this.levelData[gridY][gridX];
 
         // Check if there's a bomb at this position
-        const level = (this.scene as any).level;
-        const bombs = this.scene.children.list.filter(child =>
-            child.constructor.name === 'bomb'
-        );
-        const hasBomb = bombs.some((bomb: any) =>
+        const player = (this.scene as any).player;
+        //const hasBomb = player && player.bombs && player.bombs.some((bomb: any) =>
+        const hasBomb = player && player.getBombs().some((bomb: any) =>
             bomb.getGridX() === gridX && bomb.getGridY() === gridY
         );
 
         // Check if there's a crate at this position
+        const level = (this.scene as any).level;
         const hasCrate = level.hasCrateAt(gridX, gridY);
 
         // Allow movement on empty spaces (1) but block walls (2) and borders (70, 85) and bombs
@@ -96,16 +94,13 @@ export class Enemy extends Phaser.GameObjects.Sprite{
     private moveToGrid(newGridX: number, newGridY: number) {
         this.isMoving = true;
 
-        const oldX = this. gridX;
-        const oldY = this.gridY;
-
         this.gridX = newGridX;
         this.gridY = newGridY;
 
         const targetX = (newGridX * 16) + 8;
         const targetY = (newGridY * 16) + 8;
 
-        this.scene.tweens.add({
+        this.moveTween = this.scene.tweens.add({
             targets: this,
             x: targetX,
             y: targetY,
@@ -113,7 +108,10 @@ export class Enemy extends Phaser.GameObjects.Sprite{
             ease: 'Power2',
             onComplete: () => {
                 this.isMoving = false;
-                this.checkPlayerCollision();
+                // Check if the enemy still exists before checking collision
+                if (this.scene) {
+                    this.checkPlayerCollision();
+                }
             }
         });
     }
@@ -134,6 +132,11 @@ export class Enemy extends Phaser.GameObjects.Sprite{
     }
 
     destroy(fromScene?: boolean): void {
+        if (this.moveTween) {
+            this.moveTween.stop();
+            this.moveTween = null;
+        }
+
         if (this.moveTimer) {
             this.moveTimer.destroy();
         }
