@@ -1,30 +1,34 @@
 import { Scene } from 'phaser';
 import { Crate } from './Crate';
+import { LevelConfig } from './LevelManager';
 
 export class Level {
     private scene: Scene;
     private crates: Crate[] = [];
     private levelData: number[][];
+    private levelConfig: LevelConfig;
     public map: Phaser.Tilemaps.Tilemap | null = null;
     public layer: Phaser.Tilemaps.TilemapLayer | null = null;
 
-    constructor(scene: Scene) {
+    constructor(scene: Scene, levelConfig: LevelConfig) {
         this.scene = scene;
-        this.levelData = [
-            [ 4, 4, 4, 4, 85, 70, 70, 70, 70, 70, 70, 70, 70, 85 ],
-            [ 4, 4, 4, 4, 85, 1,  1,  2,  1,  1,  2,  1,  1,  85 ],
-            [ 4, 4, 4, 4, 85, 1,  70, 1,  70, 70, 1,  70, 1,  85 ],
-            [ 4, 4, 4, 4, 85, 2,  1,  1,  1,  1,  1,  1,  2,  85 ],
-            [ 4, 4, 4, 4, 85, 1,  70, 2,  70, 70, 2,  70, 1,  85 ],
-            [ 4, 4, 4, 4, 85, 1,  2,  1,  1,  1,  1,  2,  1,  85 ],
-            [ 4, 4, 4, 4, 85, 2,  70, 2,  70, 70, 2,  70, 2,  85 ],
-            [ 4, 4, 4, 4, 85, 1,  2,  1,  1,  1,  1,  2,  1,  85 ],
-            [ 4, 4, 4, 4, 85, 1,  2,  1,  1,  1,  1,  2,  1,  85 ],
-            [ 4, 4, 4, 4, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70 ],
-        ];
+        this.levelConfig = levelConfig;
+        this.levelData = levelConfig.data;
     }
 
     create(): void {
+        // Clear any existing crates
+        this.crates.forEach(crate => crate.destroy());
+        this.crates = [];
+
+        // Destroy existing map and layer if they exist
+        if (this.layer) {
+            this.layer.destroy();
+        }
+        if (this.map) {
+            this.map.destroy();
+        }
+
         this.map = this.scene.make.tilemap({
             data: this.levelData, 
             tileWidth: 16, 
@@ -48,6 +52,10 @@ export class Level {
                 }
             }
         }
+    }
+
+    getLevelConfig(): LevelConfig {
+        return this.levelConfig;
     }
 
     getLevelData(): number[][] {
