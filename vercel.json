@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npm run build-nolog",
+  "buildCommand": "npx vite build --config vite/config.prod.mjs",
   "outputDirectory": "dist",
-  "framework": "vite",
+  "installCommand": "npm install",
   "rewrites": [
     {
       "source": "/(.*)",
