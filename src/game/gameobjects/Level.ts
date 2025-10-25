@@ -1,105 +1,114 @@
-import { Scene } from 'phaser';
-import { Crate } from './Crate';
-import { LevelConfig } from './LevelManager';
+import { Scene } from "phaser";
+import { Crate } from "./Crate";
+import { LevelConfig } from "./LevelManager";
 
 export class Level {
-    private scene: Scene;
-    private crates: Crate[] = [];
-    private levelData: number[][];
-    private levelConfig: LevelConfig;
-    public map: Phaser.Tilemaps.Tilemap | null = null;
-    public layer: Phaser.Tilemaps.TilemapLayer | null = null;
+  private scene: Scene;
+  private crates: Crate[] = [];
+  private levelData: number[][];
+  private levelConfig: LevelConfig;
+  public map: Phaser.Tilemaps.Tilemap | null = null;
+  public layer: Phaser.Tilemaps.TilemapLayer | null = null;
 
-    constructor(scene: Scene, levelConfig: LevelConfig) {
-        this.scene = scene;
-        this.levelConfig = levelConfig;
-        this.levelData = levelConfig.data;
+  constructor(scene: Scene, levelConfig: LevelConfig) {
+    this.scene = scene;
+    this.levelConfig = levelConfig;
+    // Deep copy the level data to prevent mutating the original
+    this.levelData = levelConfig.data.map((row) => [...row]);
+  }
+
+  create(): void {
+    // Clear any existing crates
+    this.crates.forEach((crate) => crate.destroy());
+    this.crates = [];
+
+    // Destroy existing map and layer if they exist
+    if (this.layer) {
+      this.layer.destroy();
+    }
+    if (this.map) {
+      this.map.destroy();
     }
 
-    create(): void {
-        // Clear any existing crates
-        this.crates.forEach(crate => crate.destroy());
-        this.crates = [];
+    this.map = this.scene.make.tilemap({
+      data: this.levelData,
+      tileWidth: 16,
+      tileHeight: 16,
+    });
 
-        // Destroy existing map and layer if they exist
-        if (this.layer) {
-            this.layer.destroy();
+    const tiles = this.map.addTilesetImage("tiles");
+
+    if (!tiles) {
+      console.error("Failed to load tileset!");
+      return;
+    }
+
+    this.layer = this.map.createLayer(0, tiles, 0, 0);
+
+    for (let y = 0; y < this.levelData.length; y++) {
+      for (let x = 0; x < this.levelData[y].length; x++) {
+        if (this.levelData[y][x] === 2) {
+          const crate = new Crate(this.scene, x, y);
+          this.crates.push(crate);
         }
-        if (this.map) {
-            this.map.destroy();
-        }
-
-        this.map = this.scene.make.tilemap({
-            data: this.levelData, 
-            tileWidth: 16, 
-            tileHeight: 16
-        });
-        
-        const tiles = this.map.addTilesetImage('tiles');
-
-        if (!tiles) {
-            console.error('Failed to load tileset!');
-            return;
-        }
-
-        this.layer = this.map.createLayer(0, tiles, 0, 0);
-
-        for (let y = 0; y < this.levelData.length; y++) {
-            for (let x = 0; x < this.levelData[y].length; x++) {
-                if (this.levelData[y][x] === 2) {
-                    const crate = new Crate(this.scene, x, y);
-                    this.crates.push(crate);
-                }
-            }
-        }
+      }
     }
+  }
 
-    getLevelConfig(): LevelConfig {
-        return this.levelConfig;
-    }
+  getLevelConfig(): LevelConfig {
+    return this.levelConfig;
+  }
 
-    getLevelData(): number[][] {
-        return this.levelData;
-    }
+  getLevelData(): number[][] {
+    return this.levelData;
+  }
 
-    getWidth(): number {
-        return this.levelData[0].length;
-    }
+  getWidth(): number {
+    return this.levelData[0].length;
+  }
 
-    getHeight(): number {
-        return this.levelData.length;
-    }
+  getHeight(): number {
+    return this.levelData.length;
+  }
 
-    getTileAt(x: number, y: number): number {
-        if (y >= 0 && y < this.levelData.length && 
-            x >= 0 && x < this.levelData[y].length) {
-            return this.levelData[y][x];
-        }
-        return -1; // Invalid position
+  getTileAt(x: number, y: number): number {
+    if (
+      y >= 0 &&
+      y < this.levelData.length &&
+      x >= 0 &&
+      x < this.levelData[y].length
+    ) {
+      return this.levelData[y][x];
     }
+    return -1; // Invalid position
+  }
 
-    getCrateAt(gridX: number, gridY: number): Crate | undefined {
-        return this.crates.find(crate => 
-            crate.getGridX() === gridX && crate.getGridY() === gridY
-        );
-    }
+  getCrateAt(gridX: number, gridY: number): Crate | undefined {
+    return this.crates.find(
+      (crate) => crate.getGridX() === gridX && crate.getGridY() === gridY,
+    );
+  }
 
-    removeCrate(crate: Crate): void {
-        const index = this.crates.indexOf(crate);
-        if (index > -1) {
-            this.crates.splice(index, 1);
-            // Update the level data
-            this.levelData[crate.getGridY()][crate.getGridX()] = 1; // 1 = empty space
-        }
+  removeCrate(crate: Crate): void {
+    const index = this.crates.indexOf(crate);
+    if (index > -1) {
+      this.crates.splice(index, 1);
+      // Update the level data
+      this.levelData[crate.getGridY()][crate.getGridX()] = 1; // 1 = empty space
+      // Update the tilemap layer to reflect the change
+      if (this.layer) {
+        this.layer.putTileAt(1, crate.getGridX(), crate.getGridY());
+      }
     }
-    
-    hasCrateAt(gridX: number, gridY: number): boolean {
-        return this.crates.some(crate => 
-            crate.getGridX() === gridX && crate.getGridY() === gridY
-        );
-    }
+  }
 
-    getCrates(): Crate[] {
-        return this.crates;
-    }
+  hasCrateAt(gridX: number, gridY: number): boolean {
+    return this.crates.some(
+      (crate) => crate.getGridX() === gridX && crate.getGridY() === gridY,
+    );
+  }
+
+  getCrates(): Crate[] {
+    return this.crates;
+  }
 }
