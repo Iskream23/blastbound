@@ -104,8 +104,36 @@ export class Game extends Scene {
     // Reset game over flag
     this.isGameOver = false;
 
+    // Display win condition description
+    this.displayWinCondition(levelConfig.winCondition.description);
+
     // Add level complete check
     this.checkLevelComplete();
+  }
+
+  private displayWinCondition(description: string): void {
+    // Display the win condition at the start of the level
+    const text = this.add
+      .text(this.scale.width / 2, this.scale.height / 2, description, {
+        fontFamily: "PressStart2P",
+        fontSize: "8px",
+        color: "#FFFF00",
+        stroke: "#000000",
+        strokeThickness: 2,
+        align: "center",
+      })
+      .setOrigin(0.5);
+
+    // Fade out and destroy after 3 seconds
+    this.tweens.add({
+      targets: text,
+      alpha: 0,
+      duration: 500,
+      delay: 2500,
+      onComplete: () => {
+        text.destroy();
+      },
+    });
   }
 
   private checkLevelComplete(): void {
@@ -132,8 +160,12 @@ export class Game extends Scene {
     // Show level complete message
     const text = this.add
       .text(this.scale.width / 2, this.scale.height / 2, "Level Complete!", {
-        fontSize: "32px",
-        color: "#ffffff",
+        fontFamily: "PressStart2P",
+        fontSize: "16px",
+        color: "#FFFFFF",
+        stroke: "#000000",
+        strokeThickness: 4,
+        align: "center",
       })
       .setOrigin(0.5);
 
@@ -143,8 +175,8 @@ export class Game extends Scene {
       if (nextLevelId <= LevelManager.getLevelCount()) {
         this.scene.restart({ levelId: nextLevelId });
       } else {
-        // All levels complete - go to victory screen
-        this.scene.start("Victory");
+        // All levels complete - go to game over screen with victory message
+        this.scene.start("GameOver", { isVictory: true });
       }
     });
   }
@@ -165,7 +197,7 @@ export class Game extends Scene {
         this.player.setTint(0xff0000);
         this.camera.flash(500, 255, 0, 0);
         this.time.delayedCall(1500, () => {
-          this.scene.start("GameOver", { levelId: this.currentLevelId });
+          this.scene.start("GameOver", { isVictory: false });
         });
       }
     });
