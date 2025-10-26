@@ -3,6 +3,11 @@ import { Player } from "../gameobjects/Player";
 import { Level } from "../gameobjects/Level";
 import { Enemy } from "../gameobjects/Enemy";
 import { LevelManager } from "../gameobjects/LevelManager";
+import { ArenaIntegrationService, ArenaConfig } from "../services/ArenaIntegrationService";
+import { BoostManager } from "../managers/BoostManager";
+import { ItemDropManager } from "../managers/ItemDropManager";
+import { DifficultyManager } from "../managers/DifficultyManager";
+import { ArenaUI } from "../ui/ArenaUI";
 
 export class Game extends Scene {
   camera!: Phaser.Cameras.Scene2D.Camera;
@@ -13,13 +18,30 @@ export class Game extends Scene {
   isGameOver: boolean = false;
   currentLevelId: number = 1;
 
+  // Arena integration
+  private arenaService?: ArenaIntegrationService;
+  private boostManager?: BoostManager;
+  private itemDropManager?: ItemDropManager;
+  private difficultyManager?: DifficultyManager;
+  private arenaUI?: ArenaUI;
+  private arenaEnabled: boolean = false;
+
   constructor() {
     super("Game");
   }
 
-  init(data: { levelId?: number }) {
+  init(data: { levelId?: number; arenaConfig?: ArenaConfig }) {
     // Accept level ID from scene transition
     this.currentLevelId = data.levelId || 1;
+
+    // Check if Arena config is provided
+    if (data.arenaConfig) {
+      this.arenaEnabled = true;
+      console.log("[Game] Arena mode enabled with config:", data.arenaConfig);
+    } else {
+      this.arenaEnabled = false;
+      console.log("[Game] Running in standalone mode (no Arena)");
+    }
   }
 
   preload() {
@@ -34,7 +56,7 @@ export class Game extends Scene {
     this.load.image("tiles", "assets/spritesheet.png");
   }
 
-  create() {
+  async create() {
     this.camera = this.cameras.main;
     this.camera.setBackgroundColor(0x000000);
 
@@ -46,6 +68,11 @@ export class Game extends Scene {
 
     // Set up event listeners
     this.setupEventListeners();
+
+    // Initialize Arena if enabled
+    if (this.arenaEnabled) {
+      await this.initializeArena();
+    }
 
     /*
         this.events.on('crate-destroyed', (gridX: number, gridY: number) => {
@@ -189,17 +216,50 @@ export class Game extends Scene {
 
     this.events.on("enemy-hit", (enemy: Enemy) => {
       this.removeEnemy(enemy);
+
+      // Track enemy kill for Arena
+      if (this.arenaUI) {
+        this.arenaUI.addEnemyKill();
+      }
     });
 
     this.events.on("player-hit", () => {
+      // Check invincibility from boosts
+      if (this.boostManager?.isPlayerInvincible()) {
+        console.log("[Game] Player is invincible, ignoring hit!");
+        return;
+      }
+
       if (!this.isGameOver) {
         this.isGameOver = true;
         this.player.setTint(0xff0000);
         this.camera.flash(500, 255, 0, 0);
         this.time.delayedCall(1500, () => {
+          this.cleanupArena();
           this.scene.start("GameOver", { isVictory: false });
         });
       }
+    });
+
+    this.events.on("crate-destroyed", (gridX: number, gridY: number) => {
+      // Track crate destruction for Arena
+      if (this.arenaUI) {
+        this.arenaUI.addCrateDestroy();
+      }
+    });
+
+    // Arena-specific events
+    this.events.on("final-event-triggered", (event: any) => {
+      console.log("[Game] Final event triggered, ending game:", event);
+      this.isGameOver = true;
+      this.time.delayedCall(2000, () => {
+        this.cleanupArena();
+        this.scene.start("GameOver", { isVictory: true });
+      });
+    });
+
+    this.events.on("item-collected", (data: any) => {
+      console.log("[Game] Item collected:", data);
     });
   }
 
@@ -218,6 +278,19 @@ export class Game extends Scene {
     if (this.player) {
       this.player.update();
     }
+
+    // Update Arena systems
+    if (this.arenaEnabled) {
+      this.boostManager?.update();
+      this.itemDropManager?.checkPickups();
+      this.arenaUI?.update();
+
+      // Update active boosts display
+      if (this.boostManager && this.arenaUI) {
+        const activeBoosts = this.boostManager.getActiveBoosts();
+        this.arenaUI.updateBoosts(activeBoosts);
+      }
+    }
   }
 
   shutdown() {
@@ -226,9 +299,150 @@ export class Game extends Scene {
     this.events.off("player-hit");
     this.events.off("enemy-hit");
     this.events.off("crate-destroyed");
+    this.events.off("final-event-triggered");
+    this.events.off("item-collected");
 
     // Clean up enemies
     this.enemies.forEach((enemy) => enemy.destroy());
     this.enemies = [];
+
+    // Clean up Arena
+    this.cleanupArena();
+  }
+
+  // ========================================
+  // ARENA INTEGRATION METHODS
+  // ========================================
+
+  /**
+   * Initialize Arena connection and managers
+   */
+  private async initializeArena(): Promise<void> {
+    try {
+      console.log("[Game] Initializing Arena integration...");
+
+      // Get Arena config from init data
+      const arenaConfig = (this.sys.settings.data as any).arenaConfig as ArenaConfig;
+      if (!arenaConfig) {
+        console.error("[Game] No Arena config found!");
+        return;
+      }
+
+      // Create Arena UI
+      this.arenaUI = new ArenaUI(this);
+      this.arenaUI.setGameId(arenaConfig.gameId);
+
+      // Create managers
+      this.boostManager = new BoostManager(this, this.player);
+      this.itemDropManager = new ItemDropManager(this, this.player);
+      this.difficultyManager = new DifficultyManager(this, this.level, this.enemies);
+
+      // Create and initialize Arena service
+      this.arenaService = new ArenaIntegrationService(this);
+
+      // Setup Arena event handlers
+      this.setupArenaEventHandlers();
+
+      // Initialize connection
+      await this.arenaService.initialize(arenaConfig);
+
+      console.log("[Game] Arena integration initialized successfully!");
+    } catch (error) {
+      console.error("[Game] Failed to initialize Arena:", error);
+      this.arenaEnabled = false;
+    }
+  }
+
+  /**
+   * Setup Arena WebSocket event handlers
+   */
+  private setupArenaEventHandlers(): void {
+    if (!this.arenaService) return;
+
+    // Connection status
+    this.arenaService.onConnectionChange = (connected: boolean) => {
+      console.log("[Game] Arena connection changed:", connected);
+      this.arenaUI?.updateConnectionStatus(connected);
+
+      if (connected) {
+        this.arenaUI?.showNotification("Connected to Arena!", "#00ff00");
+      } else {
+        this.arenaUI?.showNotification("Disconnected from Arena", "#ff0000");
+      }
+    };
+
+    // Arena begins
+    this.arenaService.onArenaBegins = () => {
+      console.log("[Game] Arena begins!");
+      this.arenaUI?.showNotification("ARENA BEGINS!", "#ffff00", 3000);
+      this.arenaUI?.startGameTracking();
+    };
+
+    // Arena ends
+    this.arenaService.onArenaEnds = () => {
+      console.log("[Game] Arena ends!");
+      this.arenaUI?.showNotification("Arena Ended", "#ff9900");
+    };
+
+    // Player boost activated
+    this.arenaService.onBoostActivated = (boost) => {
+      console.log("[Game] Boost activated:", boost);
+      this.boostManager?.applyBoost(boost);
+    };
+
+    // Item dropped
+    this.arenaService.onItemDropped = (item) => {
+      console.log("[Game] Item dropped:", item);
+      this.itemDropManager?.spawnItem(item);
+    };
+
+    // Difficulty event
+    this.arenaService.onDifficultyEvent = (event) => {
+      console.log("[Game] Difficulty event:", event);
+      this.difficultyManager?.applyDifficultyEvent(event);
+    };
+
+    // Game completed
+    this.arenaService.onGameCompleted = (data) => {
+      console.log("[Game] Arena game completed:", data);
+      this.arenaUI?.showNotification("GAME COMPLETED!", "#00ff00", 3000);
+
+      // Report final metrics
+      this.reportFinalMetrics();
+    };
+  }
+
+  /**
+   * Report final game metrics to Arena
+   */
+  private reportFinalMetrics(): void {
+    if (!this.arenaUI || !this.arenaService) return;
+
+    const metrics = this.arenaUI.getMetrics();
+    console.log("[Game] Final metrics:", metrics);
+
+    // Could send metrics to Arena API here
+    // this.arenaService.sendMetrics(metrics);
+  }
+
+  /**
+   * Cleanup Arena resources
+   */
+  private cleanupArena(): void {
+    if (!this.arenaEnabled) return;
+
+    console.log("[Game] Cleaning up Arena resources...");
+
+    this.boostManager?.destroy();
+    this.itemDropManager?.destroy();
+    this.difficultyManager?.destroy();
+    this.arenaUI?.destroy();
+    this.arenaService?.destroy();
+
+    this.boostManager = undefined;
+    this.itemDropManager = undefined;
+    this.difficultyManager = undefined;
+    this.arenaUI = undefined;
+    this.arenaService = undefined;
   }
 }
