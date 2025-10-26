@@ -114,7 +114,7 @@ export class Game extends Scene {
   private displayWinCondition(description: string): void {
     // Display the win condition at the start of the level
     const text = this.add
-      .text(this.scale.width / 2, this.scale.height / 2, description, {
+      .text(this.scale.width / 2 - 8, this.scale.height / 2 - 8, description, {
         fontFamily: "PressStart2P",
         fontSize: "8px",
         color: "#FFFF00",
