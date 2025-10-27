@@ -167,7 +167,11 @@ export class ArenaGameService {
         baseUrl = `${parsed.protocol}//${parsed.host}`;
 
         // Extract namespace from pathname (e.g., /ws/TPSX1N)
-        if (parsed.pathname && parsed.pathname !== "/" && parsed.pathname !== "/socket.io") {
+        if (
+          parsed.pathname &&
+          parsed.pathname !== "/" &&
+          parsed.pathname !== "/socket.io"
+        ) {
           namespace = parsed.pathname;
         }
 
@@ -503,7 +507,9 @@ export class ArenaGameService {
       return {
         success: false,
         error:
-          error.response?.data?.error || error.message || "Failed to get status",
+          error.response?.data?.error ||
+          error.message ||
+          "Failed to get status",
       };
     }
   }
@@ -525,7 +531,9 @@ export class ArenaGameService {
       return {
         success: false,
         error:
-          error.response?.data?.error || error.message || "Failed to disconnect",
+          error.response?.data?.error ||
+          error.message ||
+          "Failed to disconnect",
       };
     }
   }

@@ -2,11 +2,12 @@
 
 import Cookies from "js-cookie";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? "http://localhost:4000";
-const VORLD_BASE_URL = process.env.NEXT_PUBLIC_VORLD_SERVER_URL ?? "http://localhost:4000";
+const API_BASE_URL = import.meta.env.VITE_SERVER_URL ?? "http://localhost:4000";
+const VORLD_BASE_URL =
+  import.meta.env.VITE_VORLD_SERVER_URL ?? "http://localhost:4000";
 const TOKEN_KEY = "vorld_access_token";
 const REFRESH_TOKEN_KEY = "vorld_refresh_token";
-const VORD_APP_ID = process.env.NEXT_PUBLIC_VORLD_APP_ID || "";
+const VORD_APP_ID = import.meta.env.VITE_VORLD_APP_ID || "";
 
 export type VorldUser = {
   id: string;
@@ -24,13 +25,15 @@ export type VorldUser = {
   [key: string]: unknown;
 };
 
-export type AuthResult<T = unknown> = {
-  success: true;
-  data: T;
-} | {
-  success: false;
-  error: string;
-};
+export type AuthResult<T = unknown> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      error: string;
+    };
 
 const USER_KEY = "vorld_user";
 
@@ -87,7 +90,7 @@ export class VorldAuthService {
         return {
           success: false,
           error: "No access token found. Please login again.",
-        }
+        };
       }
 
       const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
@@ -95,7 +98,7 @@ export class VorldAuthService {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
-        }
+        },
       });
 
       const payload = await response.json();
@@ -103,16 +106,16 @@ export class VorldAuthService {
       if (!response.ok || payload.sucess === false) {
         return {
           success: false,
-           error: payload?.error ?? "Failed to fetch profile",
-        }
+          error: payload?.error ?? "Failed to fetch profile",
+        };
       }
 
-       if (payload.profile) {
+      if (payload.profile) {
         const refreshToken = this.getRefreshToken();
         if (refreshToken) {
           this.setTokens(token, refreshToken, payload.profile);
         }
-      }     
+      }
 
       return {
         success: true,
@@ -122,7 +125,8 @@ export class VorldAuthService {
       console.error("[AuthService] Profile fetch error:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch profile",
+        error:
+          error instanceof Error ? error.message : "Failed to fetch profile",
       };
     }
   }
@@ -140,7 +144,7 @@ export class VorldAuthService {
       const response = await fetch(`${VORLD_BASE_URL}/api/auth/logout`, {
         method: "POST",
         headers: {
-          "x-vorld-app-id": VORD_APP_ID|| "",
+          "x-vorld-app-id": VORD_APP_ID || "",
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },

@@ -84,9 +84,31 @@ When you issue the `npm run build` command, all static assets are automatically 
 
 ## Deploying to Production
 
-After you run the `npm run build` command, your code will be built into a single bundle and saved to the `dist` folder, along with any other assets your project imported, or stored in the public assets folder.
+BlastBound consists of two parts that need to be deployed separately:
+- **Client** (Phaser game): Deploy to Netlify, Vercel, or any static hosting
+- **Server** (Node.js backend): Deploy to Render, Railway, Heroku, or any Node.js hosting
 
-In order to deploy your game, you will need to upload *all* of the contents of the `dist` folder to a public facing web server.
+For detailed deployment instructions, including:
+- Step-by-step Netlify deployment
+- Server deployment options
+- Environment variable configuration
+- CI/CD setup
+- Troubleshooting guide
+
+**See [DEPLOYMENT.md](DEPLOYMENT.md) for the complete deployment guide.**
+
+### Quick Start
+
+1. Build the client:
+   ```bash
+   npm run build
+   ```
+
+2. The production build will be in the `dist` folder
+
+3. Set the `VITE_SERVER_URL` environment variable to point to your deployed server
+
+4. Deploy the `dist` folder to your hosting provider
 
 ## Customizing the Template
 
