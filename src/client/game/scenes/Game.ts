@@ -65,17 +65,17 @@ export class Game extends Scene {
   }
 
   preload() {
-    this.load.spritesheet("player", "/assets/spritesheet.png", {
+    this.load.spritesheet("player", "assets/spritesheet.png", {
       frameWidth: 16,
       frameHeight: 16,
     });
-    this.load.spritesheet("enemy", "/assets/spritesheet.png", {
+    this.load.spritesheet("enemy", "assets/spritesheet.png", {
       frameWidth: 16,
       frameHeight: 16,
     });
 
-    this.load.image("tiles", "/assets/spritesheet.png");
-    this.load.image("bg1", "/assets/backgrounds/004.png");
+    this.load.image("tiles", "assets/spritesheet.png");
+    this.load.image("bg1", "assets/backgrounds/004.png");
   }
 
   async create() {
