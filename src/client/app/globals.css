@@ -685,6 +685,94 @@ body {
   -webkit-background-clip: text;
 }
 
+.stream-url-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin: 2rem 0 1.5rem;
+  padding: 1.5rem;
+  border-radius: 16px;
+  background: rgba(13, 28, 58, 0.35);
+  border: 1px solid rgba(180, 217, 255, 0.15);
+}
+
+.stream-url-section .portal-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.4rem;
+}
+
+.portal-label-hint {
+  font-size: 0.8rem;
+  color: rgba(167, 236, 255, 0.6);
+  letter-spacing: 0.02em;
+  font-weight: 400;
+}
+
+.stream-url-input {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(9, 16, 38, 0.65);
+  border: 1px solid rgba(180, 217, 255, 0.2);
+  color: rgba(167, 236, 255, 0.95);
+  font-size: 0.95rem;
+  font-family: "Space Grotesk", sans-serif;
+  transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
+  outline: none;
+}
+
+.stream-url-input::placeholder {
+  color: rgba(167, 236, 255, 0.35);
+}
+
+.stream-url-input:focus {
+  border-color: rgba(0, 217, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.12), inset 0 0 12px rgba(0, 217, 255, 0.08);
+  background: rgba(9, 16, 38, 0.8);
+}
+
+.stream-url-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 1.15rem;
+  border-radius: 10px;
+  background: rgba(255, 69, 140, 0.12);
+  border: 1px solid rgba(255, 94, 162, 0.35);
+  color: rgba(255, 148, 186, 0.95);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.error-message svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  color: rgba(255, 94, 162, 0.9);
+}
+
+.loading-spinner-small {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid rgba(0, 217, 255, 0.3);
+  border-top-color: rgba(0, 217, 255, 0.95);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .profile-actions {
   display: flex;
   flex-direction: column;
@@ -1528,5 +1616,129 @@ body {
   .watch-screen-container .w-96 {
     width: 100%;
     max-height: 50vh;
+  }
+}
+
+/* Countdown Overlay */
+.countdown-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.countdown-popup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.countdown-circle {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+  box-shadow:
+    0 0 60px rgba(33, 150, 243, 0.6),
+    0 0 100px rgba(33, 150, 243, 0.4),
+    inset 0 0 40px rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 60px rgba(33, 150, 243, 0.6),
+      0 0 100px rgba(33, 150, 243, 0.4),
+      inset 0 0 40px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow:
+      0 0 80px rgba(33, 150, 243, 0.8),
+      0 0 120px rgba(33, 150, 243, 0.6),
+      inset 0 0 50px rgba(255, 255, 255, 0.15);
+  }
+}
+
+.countdown-number {
+  font-family: "Press Start 2P", "Space Grotesk", monospace;
+  font-size: 80px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.8),
+    0 0 40px rgba(33, 150, 243, 0.6),
+    0 4px 8px rgba(0, 0, 0, 0.5);
+  animation: numberPulse 1s ease-in-out infinite;
+}
+
+@keyframes numberPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.countdown-text {
+  font-family: "Press Start 2P", "Space Grotesk", monospace;
+  font-size: 20px;
+  color: #64b5f6;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  text-shadow:
+    0 0 10px rgba(100, 181, 246, 0.8),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  animation: textGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes textGlow {
+  0%, 100% {
+    text-shadow:
+      0 0 10px rgba(100, 181, 246, 0.8),
+      0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    text-shadow:
+      0 0 20px rgba(100, 181, 246, 1),
+      0 0 30px rgba(33, 150, 243, 0.6),
+      0 2px 4px rgba(0, 0, 0, 0.5);
   }
 }

@@ -26,11 +26,17 @@ export class Game extends Scene {
   private arenaUI?: ArenaUI;
   private arenaEnabled: boolean = false;
 
+  // Time limit (2 minutes = 120,000 milliseconds)
+  private readonly TIME_LIMIT = 120000;
+  private gameStartTime: number = 0;
+  private timeLimitTimer?: Phaser.Time.TimerEvent;
+  private timerText?: Phaser.GameObjects.Text;
+
   constructor() {
     super("Game");
   }
 
-  init(data: { levelId?: number; arenaConfig?: ArenaConfig }) {
+  init(data: { levelId?: number; arenaConfig?: ArenaConfig; preserveTimer?: boolean; gameStartTime?: number }) {
     // Accept level ID from scene transition
     this.currentLevelId = data.levelId || 1;
 
@@ -41,6 +47,12 @@ export class Game extends Scene {
     } else {
       this.arenaEnabled = false;
       console.log("[Game] Running in standalone mode (no Arena)");
+    }
+
+    // Preserve timer state if transitioning between levels
+    if (data.preserveTimer && data.gameStartTime) {
+      this.gameStartTime = data.gameStartTime;
+      console.log("[Game] Timer state preserved from previous level");
     }
   }
 
@@ -74,6 +86,9 @@ export class Game extends Scene {
       await this.initializeArena();
     }
 
+    // Start the 5-minute time limit
+    this.startTimeLimit();
+
     /*
         this.events.on('crate-destroyed', (gridX: number, gridY: number) => {
             // Random chance to spawn a power-up
@@ -82,6 +97,106 @@ export class Game extends Scene {
                 // this.createPowerUp(gridX, gridY);
             }
         });*/
+  }
+
+  private startTimeLimit(): void {
+    // Record game start time (only if not already set from preserved state)
+    if (this.gameStartTime === 0) {
+      this.gameStartTime = Date.now();
+      console.log("[Game] 2-minute time limit started");
+    } else {
+      console.log("[Game] Continuing existing timer from", new Date(this.gameStartTime));
+    }
+
+    // Calculate remaining time
+    const elapsed = Date.now() - this.gameStartTime;
+    const remaining = Math.max(0, this.TIME_LIMIT - elapsed);
+
+    // Set up timer to trigger game over after remaining time
+    if (remaining > 0) {
+      this.timeLimitTimer = this.time.delayedCall(remaining, () => {
+        this.onTimeLimitExpired();
+      });
+    } else {
+      // Time already expired
+      this.onTimeLimitExpired();
+      return;
+    }
+
+    // Always create timer display at the top of the screen
+    this.timerText = this.add
+      .text(this.scale.width / 2, 10, "Time: 2:00", {
+        fontFamily: "PressStart2P",
+        fontSize: "8px",
+        color: "#ffffff",
+        stroke: "#000000",
+        strokeThickness: 2,
+        align: "center",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(1000)
+      .setScrollFactor(0); // Fixed position regardless of camera
+  }
+
+  private onTimeLimitExpired(): void {
+    if (!this.isGameOver) {
+      console.log("[Game] Time limit expired - Game Over!");
+      this.isGameOver = true;
+
+      // Flash the screen red
+      this.camera.flash(500, 255, 0, 0);
+
+      // Show time's up message
+      const text = this.add
+        .text(this.scale.width / 2, this.scale.height / 2, "TIME'S UP!", {
+          fontFamily: "PressStart2P",
+          fontSize: "16px",
+          color: "#FF0000",
+          stroke: "#000000",
+          strokeThickness: 4,
+          align: "center",
+        })
+        .setOrigin(0.5);
+
+      // Transition to game over screen
+      this.time.delayedCall(2000, () => {
+        this.cleanupArena();
+        this.scene.start("GameOver", { isVictory: false, reason: "Time limit expired" });
+      });
+    }
+  }
+
+  private updateTimerDisplay(): void {
+    if (!this.timerText || this.gameStartTime === 0) return;
+
+    const elapsed = Date.now() - this.gameStartTime;
+    const remaining = Math.max(0, this.TIME_LIMIT - elapsed);
+    const seconds = Math.floor(remaining / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const remainderSeconds = seconds % 60;
+
+    // Change color based on remaining time
+    let color = "#ffffff";
+    if (remaining < 60000) {
+      // Less than 1 minute - red and pulse
+      color = "#ff0000";
+      if (Math.floor(Date.now() / 500) % 2 === 0) {
+        this.timerText.setScale(1.1);
+      } else {
+        this.timerText.setScale(1.0);
+      }
+    } else if (remaining < 120000) {
+      // Less than 2 minutes - yellow
+      color = "#ffff00";
+      this.timerText.setScale(1.0);
+    } else {
+      this.timerText.setScale(1.0);
+    }
+
+    this.timerText.setColor(color);
+    this.timerText.setText(
+      `Time: ${minutes}:${remainderSeconds.toString().padStart(2, "0")}`
+    );
   }
 
   private loadLevel(levelId: number): void {
@@ -200,7 +315,12 @@ export class Game extends Scene {
     this.time.delayedCall(2000, () => {
       const nextLevelId = this.currentLevelId + 1;
       if (nextLevelId <= LevelManager.getLevelCount()) {
-        this.scene.restart({ levelId: nextLevelId });
+        // Preserve timer state when transitioning to next level
+        this.scene.restart({
+          levelId: nextLevelId,
+          preserveTimer: true,
+          gameStartTime: this.gameStartTime
+        });
       } else {
         // All levels complete - go to game over screen with victory message
         this.scene.start("GameOver", { isVictory: true });
@@ -279,6 +399,9 @@ export class Game extends Scene {
       this.player.update();
     }
 
+    // Update timer display
+    this.updateTimerDisplay();
+
     // Update Arena systems
     if (this.arenaEnabled) {
       this.boostManager?.update();
@@ -301,6 +424,12 @@ export class Game extends Scene {
     this.events.off("crate-destroyed");
     this.events.off("final-event-triggered");
     this.events.off("item-collected");
+
+    // Clean up time limit timer
+    if (this.timeLimitTimer) {
+      this.timeLimitTimer.remove();
+      this.timeLimitTimer = undefined;
+    }
 
     // Clean up enemies
     this.enemies.forEach((enemy) => enemy.destroy());

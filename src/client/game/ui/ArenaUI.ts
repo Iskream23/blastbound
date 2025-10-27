@@ -22,6 +22,7 @@ export class ArenaUI {
   private gameStartTime: number = 0;
   private enemiesKilled: number = 0;
   private cratesDestroyed: number = 0;
+  private timeLimit: number = 120000; // 2 minutes in milliseconds
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -111,7 +112,7 @@ export class ArenaUI {
     this.metricsContainer.add(this.cratesDestroyedText);
 
     this.survivalTimeText = this.scene.add
-      .text(0, 32, "Time: 0:00", {
+      .text(0, 32, "Time Left: 2:00", {
         fontFamily: "PressStart2P",
         fontSize: "5px",
         color: "#ffffff",
@@ -121,8 +122,8 @@ export class ArenaUI {
       .setOrigin(0, 0);
     this.metricsContainer.add(this.survivalTimeText);
 
-    // Hide metrics initially
-    this.metricsContainer.setVisible(false);
+    // Show metrics by default (removed hide)
+    this.metricsContainer.setVisible(true);
   }
 
   /**
@@ -292,18 +293,30 @@ export class ArenaUI {
   }
 
   /**
-   * Update survival time
+   * Update survival time (showing countdown)
    */
   public updateSurvivalTime(): void {
     if (this.gameStartTime === 0) return;
 
     const elapsed = Date.now() - this.gameStartTime;
-    const seconds = Math.floor(elapsed / 1000);
+    const remaining = Math.max(0, this.timeLimit - elapsed);
+    const seconds = Math.floor(remaining / 1000);
     const minutes = Math.floor(seconds / 60);
     const remainderSeconds = seconds % 60;
 
+    // Change color based on remaining time
+    let color = "#ffffff";
+    if (remaining < 60000) {
+      // Less than 1 minute - red
+      color = "#ff0000";
+    } else if (remaining < 120000) {
+      // Less than 2 minutes - yellow
+      color = "#ffff00";
+    }
+
+    this.survivalTimeText.setColor(color);
     this.survivalTimeText.setText(
-      `Time: ${minutes}:${remainderSeconds.toString().padStart(2, "0")}`
+      `Time Left: ${minutes}:${remainderSeconds.toString().padStart(2, "0")}`
     );
   }
 
