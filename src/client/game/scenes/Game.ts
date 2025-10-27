@@ -11,7 +11,6 @@ import { BoostManager } from "../managers/BoostManager";
 import { ItemDropManager } from "../managers/ItemDropManager";
 import { DifficultyManager } from "../managers/DifficultyManager";
 import { ArenaUI } from "../ui/ArenaUI";
-import { BackgroundScrollingPostFxPipeline } from "../shaders/background-scrolling-post-fx-pipeline";
 
 export class Game extends Scene {
   camera!: Phaser.Cameras.Scene2D.Camera;
@@ -21,7 +20,6 @@ export class Game extends Scene {
   enemies!: Enemy[];
   isGameOver: boolean = false;
   currentLevelId: number = 1;
-  pipeline!: BackgroundScrollingPostFxPipeline;
 
   // Arena integration
   private arenaService?: ArenaIntegrationService;
@@ -84,9 +82,6 @@ export class Game extends Scene {
     this.camera = this.cameras.main;
     this.camera.setBackgroundColor(0x000000);
 
-    this.setupPipelines();
-    this.createMainBg();
-
     // Load the level
     this.loadLevel(this.currentLevelId);
 
@@ -109,31 +104,6 @@ export class Game extends Scene {
                 // this.createPowerUp(gridX, gridY);
             }
         });*/
-  }
-
-  private setupPipelines(): void {
-    const renderer = this.renderer as Phaser.Renderer.WebGL.WebGLRenderer;
-    if (!renderer.pipelines.get(BackgroundScrollingPostFxPipeline.name)) {
-      renderer.pipelines.addPostPipeline(
-        BackgroundScrollingPostFxPipeline.name,
-        BackgroundScrollingPostFxPipeline,
-      );
-    }
-  }
-
-  createMainBg(): void {
-    const bg = this.add
-      .image(0, 0, "bg1")
-      .setDisplaySize(this.camera.width, this.camera.height)
-      .setOrigin(0, 0)
-      .setPostPipeline(BackgroundScrollingPostFxPipeline.name);
-
-    this.pipeline = bg.getPostPipeline(
-      BackgroundScrollingPostFxPipeline.name,
-    ) as BackgroundScrollingPostFxPipeline;
-
-    // Reset shader time for smooth scrolling from the start
-    this.pipeline.resetTime();
   }
 
   private startTimeLimit(): void {
