@@ -3,11 +3,15 @@ import { Player } from "../gameobjects/Player";
 import { Level } from "../gameobjects/Level";
 import { Enemy } from "../gameobjects/Enemy";
 import { LevelManager } from "../gameobjects/LevelManager";
-import { ArenaIntegrationService, ArenaConfig } from "../services/ArenaIntegrationService";
+import {
+  ArenaIntegrationService,
+  ArenaConfig,
+} from "../services/ArenaIntegrationService";
 import { BoostManager } from "../managers/BoostManager";
 import { ItemDropManager } from "../managers/ItemDropManager";
 import { DifficultyManager } from "../managers/DifficultyManager";
 import { ArenaUI } from "../ui/ArenaUI";
+import { BackgroundScrollingPostFxPipeline } from "../shaders/background-scrolling-post-fx-pipeline";
 
 export class Game extends Scene {
   camera!: Phaser.Cameras.Scene2D.Camera;
@@ -17,6 +21,7 @@ export class Game extends Scene {
   enemies!: Enemy[];
   isGameOver: boolean = false;
   currentLevelId: number = 1;
+  pipeline!: BackgroundScrollingPostFxPipeline;
 
   // Arena integration
   private arenaService?: ArenaIntegrationService;
@@ -36,7 +41,12 @@ export class Game extends Scene {
     super("Game");
   }
 
-  init(data: { levelId?: number; arenaConfig?: ArenaConfig; preserveTimer?: boolean; gameStartTime?: number }) {
+  init(data: {
+    levelId?: number;
+    arenaConfig?: ArenaConfig;
+    preserveTimer?: boolean;
+    gameStartTime?: number;
+  }) {
     // Accept level ID from scene transition
     this.currentLevelId = data.levelId || 1;
 
@@ -57,23 +67,29 @@ export class Game extends Scene {
   }
 
   preload() {
-    this.load.spritesheet("player", "assets/spritesheet.png", {
+    this.load.spritesheet(
+      "player",
+      "src/client/public/assets/spritesheet.png",
+      {
+        frameWidth: 16,
+        frameHeight: 16,
+      },
+    );
+    this.load.spritesheet("enemy", "src/client/public/assets/spritesheet.png", {
       frameWidth: 16,
       frameHeight: 16,
     });
-    this.load.spritesheet("enemy", "assets/spritesheet.png", {
-      frameWidth: 16,
-      frameHeight: 16,
-    });
-    this.load.image("tiles", "assets/spritesheet.png");
+
+    this.load.image("tiles", "src/client/public/assets/spritesheet.png");
+    this.load.image("bg1", "src/client/public/assets/backgrounds/004.png");
   }
 
   async create() {
     this.camera = this.cameras.main;
     this.camera.setBackgroundColor(0x000000);
 
-    this.background = this.add.image(512, 384, "background");
-    this.background.setAlpha(0.5);
+    this.setupPipelines();
+    this.createMainBg();
 
     // Load the level
     this.loadLevel(this.currentLevelId);
@@ -99,13 +115,41 @@ export class Game extends Scene {
         });*/
   }
 
+  private setupPipelines(): void {
+    const renderer = this.renderer as Phaser.Renderer.WebGL.WebGLRenderer;
+    if (!renderer.pipelines.get(BackgroundScrollingPostFxPipeline.name)) {
+      renderer.pipelines.addPostPipeline(
+        BackgroundScrollingPostFxPipeline.name,
+        BackgroundScrollingPostFxPipeline,
+      );
+    }
+  }
+
+  createMainBg(): void {
+    const bg = this.add
+      .image(0, 0, "bg1")
+      .setDisplaySize(this.camera.width, this.camera.height)
+      .setOrigin(0, 0)
+      .setPostPipeline(BackgroundScrollingPostFxPipeline.name);
+
+    this.pipeline = bg.getPostPipeline(
+      BackgroundScrollingPostFxPipeline.name,
+    ) as BackgroundScrollingPostFxPipeline;
+
+    // Reset shader time for smooth scrolling from the start
+    this.pipeline.resetTime();
+  }
+
   private startTimeLimit(): void {
     // Record game start time (only if not already set from preserved state)
     if (this.gameStartTime === 0) {
       this.gameStartTime = Date.now();
       console.log("[Game] 2-minute time limit started");
     } else {
-      console.log("[Game] Continuing existing timer from", new Date(this.gameStartTime));
+      console.log(
+        "[Game] Continuing existing timer from",
+        new Date(this.gameStartTime),
+      );
     }
 
     // Calculate remaining time
@@ -125,7 +169,7 @@ export class Game extends Scene {
 
     // Always create timer display at the top of the screen
     this.timerText = this.add
-      .text(this.scale.width / 2, 10, "Time: 2:00", {
+      .text(this.scale.width - 50, 10, "Time: 2:00", {
         fontFamily: "PressStart2P",
         fontSize: "8px",
         color: "#ffffff",
@@ -142,6 +186,12 @@ export class Game extends Scene {
     if (!this.isGameOver) {
       console.log("[Game] Time limit expired - Game Over!");
       this.isGameOver = true;
+
+      // Destroy timer text to prevent further updates
+      if (this.timerText) {
+        this.timerText.destroy();
+        this.timerText = undefined;
+      }
 
       // Flash the screen red
       this.camera.flash(500, 255, 0, 0);
@@ -161,13 +211,16 @@ export class Game extends Scene {
       // Transition to game over screen
       this.time.delayedCall(2000, () => {
         this.cleanupArena();
-        this.scene.start("GameOver", { isVictory: false, reason: "Time limit expired" });
+        this.scene.start("GameOver", {
+          isVictory: false,
+          reason: "Time limit expired",
+        });
       });
     }
   }
 
   private updateTimerDisplay(): void {
-    if (!this.timerText || this.gameStartTime === 0) return;
+    if (!this.timerText || this.gameStartTime === 0 || this.isGameOver) return;
 
     const elapsed = Date.now() - this.gameStartTime;
     const remaining = Math.max(0, this.TIME_LIMIT - elapsed);
@@ -195,7 +248,7 @@ export class Game extends Scene {
 
     this.timerText.setColor(color);
     this.timerText.setText(
-      `Time: ${minutes}:${remainderSeconds.toString().padStart(2, "0")}`
+      `Time: ${minutes}:${remainderSeconds.toString().padStart(2, "0")}`,
     );
   }
 
@@ -319,7 +372,7 @@ export class Game extends Scene {
         this.scene.restart({
           levelId: nextLevelId,
           preserveTimer: true,
-          gameStartTime: this.gameStartTime
+          gameStartTime: this.gameStartTime,
         });
       } else {
         // All levels complete - go to game over screen with victory message
@@ -451,7 +504,8 @@ export class Game extends Scene {
       console.log("[Game] Initializing Arena integration...");
 
       // Get Arena config from init data
-      const arenaConfig = (this.sys.settings.data as any).arenaConfig as ArenaConfig;
+      const arenaConfig = (this.sys.settings.data as any)
+        .arenaConfig as ArenaConfig;
       if (!arenaConfig) {
         console.error("[Game] No Arena config found!");
         return;
@@ -464,7 +518,11 @@ export class Game extends Scene {
       // Create managers
       this.boostManager = new BoostManager(this, this.player);
       this.itemDropManager = new ItemDropManager(this, this.player);
-      this.difficultyManager = new DifficultyManager(this, this.level, this.enemies);
+      this.difficultyManager = new DifficultyManager(
+        this,
+        this.level,
+        this.enemies,
+      );
 
       // Create and initialize Arena service
       this.arenaService = new ArenaIntegrationService(this);
