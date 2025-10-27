@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { VorldUser } from "../_lib/authService";
-import { getArenaService } from "../../lib/arenaGameService";
 
 interface PhaserGameWrapperProps {
   userProfile: VorldUser;
@@ -37,44 +36,17 @@ export default function PhaserGameWrapper({ userProfile }: PhaserGameWrapperProp
           container.removeChild(container.firstChild);
         }
 
-        // Initialize Arena integration
-        console.log("[PhaserGameWrapper] Initializing Arena integration...");
-        const arenaService = getArenaService();
-
-        // Get the user's auth token from localStorage
-        const token = localStorage.getItem("vorld_token");
-        if (!token) {
-          console.warn("[PhaserGameWrapper] No auth token found, starting game without Arena");
-        }
-
-        // Initialize Arena game session
-        let arenaConfig = null;
-        if (token) {
-          // const streamUrl = `https://twitch.tv/${userProfile.username}`;
-          const streamUrl = `https://www.twitch.tv/lizabaktt`;
-          const result = await arenaService.initializeGame(streamUrl, token);
-
-          if (result.success && result.data) {
-            console.log("[PhaserGameWrapper] Arena initialized successfully:", result.data);
-
-            // Prepare Arena config for Phaser game
-            arenaConfig = {
-              gameId: result.data.gameId,
-              streamUrl: streamUrl,
-              websocketUrl: result.data.websocketUrl,
-              token: token,
-              appId: result.data.evaGameDetails.vorldAppId,
-              arenaGameId: result.data.evaGameDetails.arcadeGameId,
-            };
-          } else {
-            console.error("[PhaserGameWrapper] Failed to initialize Arena:", result.error);
-            setInitError(result.error || "Failed to initialize Arena");
-            // Continue without Arena integration
-          }
+        // Get Arena config from window (set by profile page)
+        const arenaConfig = (window as any).arenaConfig || null;
+        
+        if (arenaConfig) {
+          console.log("[PhaserGameWrapper] Arena config loaded:", arenaConfig);
+        } else {
+          console.warn("[PhaserGameWrapper] No Arena config found, starting game in standalone mode");
         }
 
         // Dynamically import your game
-        const { default: StartGame } = await import("../../../game/main");
+        const { default: StartGame } = await import("../../game/main");
 
         // Start the game with the container ID
         const createdGame = StartGame("game-container");
@@ -87,14 +59,13 @@ export default function PhaserGameWrapper({ userProfile }: PhaserGameWrapperProp
         }
         (window as any)[GLOBAL_GAME_KEY] = createdGame;
 
-        // Pass user data and Arena config to game via global object
+        // Pass user data to game via global object
         if (window) {
           (window as any).currentUser = {
             username: userProfile.username,
             email: userProfile.email,
             id: userProfile.id
           };
-          (window as any).arenaConfig = arenaConfig;
         }
 
         console.log("[PhaserGameWrapper] Game loaded successfully with Arena config:", arenaConfig ? "enabled" : "disabled");
@@ -124,9 +95,10 @@ export default function PhaserGameWrapper({ userProfile }: PhaserGameWrapperProp
         }
         (window as any)[GLOBAL_GAME_KEY] = null;
         
-        // Clean up global user data
-        if (window && (window as any).currentUser) {
+        // Clean up global user data and arena config
+        if (window) {
           delete (window as any).currentUser;
+          delete (window as any).arenaConfig;
         }
       }
     };

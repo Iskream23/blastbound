@@ -1,4 +1,4 @@
-import StartGame from './game/main';
+import StartGame from './client/game/main';
 
 document.addEventListener('DOMContentLoaded', () => {
 
