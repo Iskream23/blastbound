@@ -82,6 +82,12 @@ export class Game extends Scene {
     this.camera = this.cameras.main;
     this.camera.setBackgroundColor(0x000000);
 
+    // Add background image
+    this.add
+      .image(0, 0, "bg1")
+      .setOrigin(0, 0)
+      .setDisplaySize(this.scale.width, this.scale.height);
+
     // Load the level
     this.loadLevel(this.currentLevelId);
 

@@ -24,6 +24,7 @@ const phasermsg = () => {
 export default defineConfig({
   root: resolve(__dirname, ".."),
   base: "./",
+  publicDir: resolve(__dirname, "../public"),
   logLevel: "warning",
   resolve: {
     extensions: [".ts", ".js", ".json"],

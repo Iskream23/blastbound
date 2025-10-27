@@ -8,6 +8,7 @@ const __dirname = dirname(__filename);
 export default defineConfig({
   root: resolve(__dirname, ".."),
   base: "./",
+  publicDir: resolve(__dirname, "../public"),
   resolve: {
     extensions: [".ts", ".js", ".json"],
     alias: {
