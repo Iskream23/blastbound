@@ -132,7 +132,7 @@ export class ArenaGameService {
         };
       }
     } catch (error: any) {
-      console.error("Failed to initialize game:", error);
+      console.error("Failed to initialize game client:", error);
       return {
         success: false,
         error:
@@ -148,10 +148,55 @@ export class ArenaGameService {
     try {
       if (!this.gameState?.websocketUrl) return false;
 
-      this.socket = io(this.gameState.websocketUrl, {
-        transports: ["websocket"],
+      // Parse the WebSocket URL to extract base URL and namespace
+      const wsUrl = this.gameState.websocketUrl;
+      let baseUrl = "";
+      let namespace = ""; // Socket.IO namespace (e.g., /ws/TPSX1N)
+
+      try {
+        const parsed = new URL(wsUrl);
+
+        // Convert ws/wss to http/https for Socket.IO client
+        if (parsed.protocol === "wss:") {
+          parsed.protocol = "https:";
+        } else if (parsed.protocol === "ws:") {
+          parsed.protocol = "http:";
+        }
+
+        // Extract base URL (protocol + host)
+        baseUrl = `${parsed.protocol}//${parsed.host}`;
+
+        // Extract namespace from pathname (e.g., /ws/TPSX1N)
+        if (parsed.pathname && parsed.pathname !== "/" && parsed.pathname !== "/socket.io") {
+          namespace = parsed.pathname;
+        }
+
+        console.log(`🔗 WebSocket Base URL: ${baseUrl}`);
+        console.log(`🔗 WebSocket Namespace: ${namespace || "(default)"}`);
+      } catch (e) {
+        console.error("Failed to parse WebSocket URL:", e);
+        // Fallback to default
+        baseUrl = "https://airdrop-arcade.onrender.com";
+      }
+
+      // Connect to base URL + namespace
+      // Socket.IO namespace is part of the connection URL, not a separate option
+      const connectionUrl = baseUrl;
+
+      console.log(`🔌 Full connection URL: ${connectionUrl}`);
+
+      this.socket = io(connectionUrl, {
+        transports: ["websocket", "polling"],
+        timeout: 30000,
+        forceNew: true,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 10,
+        reconnectionDelayMax: 5000,
+        randomizationFactor: 0.5,
         auth: {
           token: this.userToken,
+          gameId: this.gameState.gameId,
         },
       });
 
@@ -160,11 +205,25 @@ export class ArenaGameService {
       return new Promise((resolve) => {
         this.socket?.on("connect", () => {
           console.log("✅ Connected to Arena WebSocket");
+          console.log(`🔗 Socket ID: ${this.socket?.id}`);
+
+          // Join game room
+          if (this.gameState?.gameId) {
+            this.socket?.emit("join_game", this.gameState.gameId);
+            console.log(`🎮 Joined game room: ${this.gameState.gameId}`);
+          }
+
           resolve(true);
         });
 
-        this.socket?.on("connect_error", (error) => {
+        this.socket?.on("connect_error", (error: any) => {
           console.error("❌ WebSocket connection failed:", error);
+          console.error("Error details:", {
+            message: error.message,
+            description: error.description,
+            context: error.context,
+            type: error.type,
+          });
           resolve(false);
         });
       });
