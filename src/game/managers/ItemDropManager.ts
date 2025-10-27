@@ -162,8 +162,8 @@ export class ItemDropManager {
    * Find empty spawn position near player
    */
   private findSpawnPosition(): { gridX: number; gridY: number } {
-    const playerGridX = this.player.gridX;
-    const playerGridY = this.player.gridY;
+    const playerGridX = this.player.getGridX();
+    const playerGridY = this.player.getGridY();
 
     // Try positions in a spiral around player
     const offsets = [
@@ -290,8 +290,8 @@ export class ItemDropManager {
    * Check for item pickup (call in scene update)
    */
   public checkPickups(): void {
-    const playerGridX = this.player.gridX;
-    const playerGridY = this.player.gridY;
+    const playerGridX = this.player.getGridX();
+    const playerGridY = this.player.getGridY();
 
     for (const [id, item] of this.items.entries()) {
       if (item.gridX === playerGridX && item.gridY === playerGridY) {

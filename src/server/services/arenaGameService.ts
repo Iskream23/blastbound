@@ -13,7 +13,7 @@ import type {
 const ARENA_SERVER_URL =
   process.env.ARENA_SERVER_URL || "wss://airdrop-arcade.onrender.com";
 const GAME_API_URL =
-  process.env.GAME_API_URL || "https://arena.vorld.com/api";
+  process.env.GAME_API_URL || "https://airdrop-arcade.onrender.com/api/";
 const ARENA_GAME_ID = process.env.ARENA_GAME_ID || "";
 
 export class ArenaGameService {
@@ -34,23 +34,28 @@ export class ArenaGameService {
     try {
       this.userToken = userToken;
 
+      // Build headers dynamically, only include ARENA_GAME_ID if it's set
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${userToken}`,
+        "X-Vorld-App-ID": this.vorldAppId,
+        "Content-Type": "application/json",
+      };
+
+      if (ARENA_GAME_ID) {
+        headers["X-Arena-Arcade-Game-ID"] = ARENA_GAME_ID;
+      }
+
       const response = await axios.post<{ data: GameState }>(
-        `${GAME_API_URL}/games/init`,
+        `${GAME_API_URL}/games`,
         { streamUrl },
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-            "X-Arena-Arcade-Game-ID": ARENA_GAME_ID,
-            "X-Vorld-App-ID": this.vorldAppId,
-            "Content-Type": "application/json",
-          },
-        },
+        { headers },
       );
 
       this.gameState = response.data.data;
 
       // Connect to WebSocket
       if (this.gameState?.websocketUrl) {
+        console.log("Start connect websocket")
         await this.connectWebSocket();
       }
 
@@ -59,10 +64,16 @@ export class ArenaGameService {
         data: this.gameState,
       };
     } catch (error: any) {
-      console.error("Failed to initialize game:", error);
+      console.error("Failed to initialize game server:", error);
+      console.error("Error details:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.config?.headers,
+      });
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to initialize game",
+        error: error.response?.data?.message || error.response?.data?.error || "Failed to initialize game",
       };
     }
   }
@@ -72,29 +83,88 @@ export class ArenaGameService {
     try {
       if (!this.gameState?.websocketUrl) return false;
 
-      this.socket = io(this.gameState.websocketUrl, {
-        transports: ["websocket"],
+      // Parse the WebSocket URL to extract base URL and namespace
+      const wsUrl = this.gameState.websocketUrl;
+      let baseUrl = "";
+      let namespace = ""; // Socket.IO namespace (e.g., /ws/TPSX1N)
+
+      try {
+        const parsed = new URL(wsUrl);
+
+        // Convert ws/wss to http/https for Socket.IO client
+        if (parsed.protocol === "wss:") {
+          parsed.protocol = "https:";
+        } else if (parsed.protocol === "ws:") {
+          parsed.protocol = "http:";
+        }
+
+        // Extract base URL (protocol + host)
+        baseUrl = `${parsed.protocol}//${parsed.host}`;
+
+        // Extract namespace from pathname (e.g., /ws/TPSX1N)
+        if (parsed.pathname && parsed.pathname !== "/" && parsed.pathname !== "/socket.io") {
+          namespace = parsed.pathname;
+        }
+
+        console.log(`🔗 [Server] WebSocket Base URL: ${baseUrl}`);
+        console.log(`🔗 [Server] WebSocket Namespace: ${namespace || "(default)"}`);
+      } catch (e) {
+        console.error("[Server] Failed to parse WebSocket URL:", e);
+        // Fallback to default
+        baseUrl = "https://airdrop-arcade.onrender.com";
+      }
+
+      // Connect to base URL + namespace
+      // Socket.IO namespace is part of the connection URL, not a separate option
+      let connectionUrl: string = baseUrl;
+      console.log(`🔌 [Server] Full connection URL: ${connectionUrl}`);
+
+      this.socket = io(connectionUrl, {
+        transports: ["websocket", "polling"],
+        timeout: 30000,
+        forceNew: true,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 10,
+        reconnectionDelayMax: 5000,
+        randomizationFactor: 0.5,
         auth: {
           token: this.userToken,
           appId: this.vorldAppId,
+          gameId: this.gameState.gameId,
         },
       });
 
+      console.log(`🔌 [Server] Connecting to Arena WebSocket...`);
       this.setupEventListeners();
 
       return new Promise((resolve) => {
         this.socket?.on("connect", () => {
-          console.log("✅ Connected to Arena WebSocket");
+          console.log("✅ [Server] Connected to Arena WebSocket");
+          console.log(`🔗 [Server] Socket ID: ${this.socket?.id}`);
+
+          // Join game room
+          if (this.gameState?.gameId) {
+            this.socket?.emit("join_game", this.gameState.gameId);
+            console.log(`🎮 [Server] Joined game room: ${this.gameState.gameId}`);
+          }
+
           resolve(true);
         });
 
-        this.socket?.on("connect_error", (error) => {
-          console.error("❌ WebSocket connection failed:", error);
+        this.socket?.on("connect_error", (error: any) => {
+          console.error("❌ [Server] WebSocket connection failed:", error);
+          console.error("Error details:", {
+            message: error.message,
+            description: error.description,
+            context: error.context,
+            type: error.type,
+          });
           resolve(false);
         });
       });
     } catch (error) {
-      console.error("Failed to connect to WebSocket:", error);
+      console.error("[Server] Failed to connect to WebSocket:", error);
       return false;
     }
   }
@@ -182,15 +252,18 @@ export class ArenaGameService {
     gameId: string,
   ): Promise<{ success: boolean; data?: GameState; error?: string }> {
     try {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${this.userToken}`,
+        "X-Vorld-App-ID": this.vorldAppId,
+      };
+
+      if (ARENA_GAME_ID) {
+        headers["X-Arena-Arcade-Game-ID"] = ARENA_GAME_ID;
+      }
+
       const response = await axios.get<{ data: GameState }>(
         `${GAME_API_URL}/games/${gameId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${this.userToken}`,
-            "X-Arena-Arcade-Game-ID": ARENA_GAME_ID,
-            "X-Vorld-App-ID": this.vorldAppId,
-          },
-        },
+        { headers },
       );
 
       return {
@@ -201,7 +274,7 @@ export class ArenaGameService {
       console.error("Failed to get game details:", error);
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to get game details",
+        error: error.response?.data?.message || error.response?.data?.error || "Failed to get game details",
       };
     }
   }
@@ -214,17 +287,20 @@ export class ArenaGameService {
     username: string,
   ): Promise<{ success: boolean; data?: BoostData; error?: string }> {
     try {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${this.userToken}`,
+        "X-Vorld-App-ID": this.vorldAppId,
+        "Content-Type": "application/json",
+      };
+
+      if (ARENA_GAME_ID) {
+        headers["X-Arena-Arcade-Game-ID"] = ARENA_GAME_ID;
+      }
+
       const response = await axios.post<{ data: BoostData }>(
         `${GAME_API_URL}/games/boost/player/${gameId}/${playerId}`,
         { amount, username },
-        {
-          headers: {
-            Authorization: `Bearer ${this.userToken}`,
-            "X-Arena-Arcade-Game-ID": ARENA_GAME_ID,
-            "X-Vorld-App-ID": this.vorldAppId,
-            "Content-Type": "application/json",
-          },
-        },
+        { headers },
       );
 
       return {
@@ -235,7 +311,7 @@ export class ArenaGameService {
       console.error("Failed to boost player:", error);
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to boost player",
+        error: error.response?.data?.message || error.response?.data?.error || "Failed to boost player",
       };
     }
   }
@@ -247,17 +323,20 @@ export class ArenaGameService {
     oldStreamUrl: string,
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${this.userToken}`,
+        "X-Vorld-App-ID": this.vorldAppId,
+        "Content-Type": "application/json",
+      };
+
+      if (ARENA_GAME_ID) {
+        headers["X-Arena-Arcade-Game-ID"] = ARENA_GAME_ID;
+      }
+
       const response = await axios.put(
         `${GAME_API_URL}/games/${gameId}/stream-url`,
         { streamUrl, oldStreamUrl },
-        {
-          headers: {
-            Authorization: `Bearer ${this.userToken}`,
-            "X-Arena-Arcade-Game-ID": ARENA_GAME_ID,
-            "X-Vorld-App-ID": this.vorldAppId,
-            "Content-Type": "application/json",
-          },
-        },
+        { headers },
       );
 
       return {
@@ -268,7 +347,7 @@ export class ArenaGameService {
       console.error("Failed to update stream URL:", error);
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to update stream URL",
+        error: error.response?.data?.message || error.response?.data?.error || "Failed to update stream URL",
       };
     }
   }
@@ -280,12 +359,17 @@ export class ArenaGameService {
     error?: string;
   }> {
     try {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${this.userToken}`,
+        "X-Vorld-App-ID": this.vorldAppId,
+      };
+
+      if (ARENA_GAME_ID) {
+        headers["X-Arena-Arcade-Game-ID"] = ARENA_GAME_ID;
+      }
+
       const response = await axios.get(`${GAME_API_URL}/items/catalog`, {
-        headers: {
-          Authorization: `Bearer ${this.userToken}`,
-          "X-Arena-Arcade-Game-ID": ARENA_GAME_ID,
-          "X-Vorld-App-ID": this.vorldAppId,
-        },
+        headers,
       });
 
       return {
@@ -296,7 +380,7 @@ export class ArenaGameService {
       console.error("Failed to get items catalog:", error);
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to get items catalog",
+        error: error.response?.data?.message || error.response?.data?.error || "Failed to get items catalog",
       };
     }
   }
@@ -308,17 +392,20 @@ export class ArenaGameService {
     targetPlayer: string,
   ): Promise<{ success: boolean; data?: ItemDrop; error?: string }> {
     try {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${this.userToken}`,
+        "X-Vorld-App-ID": this.vorldAppId,
+        "Content-Type": "application/json",
+      };
+
+      if (ARENA_GAME_ID) {
+        headers["X-Arena-Arcade-Game-ID"] = ARENA_GAME_ID;
+      }
+
       const response = await axios.post<{ data: ItemDrop }>(
         `${GAME_API_URL}/items/drop/${gameId}`,
         { itemId, targetPlayer },
-        {
-          headers: {
-            Authorization: `Bearer ${this.userToken}`,
-            "X-Arena-Arcade-Game-ID": ARENA_GAME_ID,
-            "X-Vorld-App-ID": this.vorldAppId,
-            "Content-Type": "application/json",
-          },
-        },
+        { headers },
       );
 
       return {
@@ -329,7 +416,7 @@ export class ArenaGameService {
       console.error("Failed to drop item:", error);
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to drop item",
+        error: error.response?.data?.message || error.response?.data?.error || "Failed to drop item",
       };
     }
   }

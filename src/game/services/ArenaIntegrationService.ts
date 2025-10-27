@@ -87,24 +87,43 @@ export class ArenaIntegrationService {
       throw new Error("Arena config not set");
     }
 
-    // Parse WebSocket URL
-    let wsUrl = this.config.websocketUrl;
+    // Parse WebSocket URL to extract base URL and namespace
+    const wsUrl = this.config.websocketUrl;
+    let baseUrl = "";
+    let namespace = ""; // Socket.IO namespace (e.g., /ws/TPSX1N)
+
     try {
       const parsed = new URL(wsUrl);
+
+      // Convert ws/wss to http/https for Socket.IO client
       if (parsed.protocol === "wss:") {
         parsed.protocol = "https:";
       } else if (parsed.protocol === "ws:") {
         parsed.protocol = "http:";
       }
-      wsUrl = `${parsed.protocol}//${parsed.host}`;
+
+      // Extract base URL (protocol + host)
+      baseUrl = `${parsed.protocol}//${parsed.host}`;
+
+      // Extract namespace from pathname (e.g., /ws/TPSX1N)
+      if (parsed.pathname && parsed.pathname !== "/" && parsed.pathname !== "/socket.io") {
+        namespace = parsed.pathname;
+      }
+
+      console.log(`[Arena] WebSocket Base URL: ${baseUrl}`);
+      console.log(`[Arena] WebSocket Namespace: ${namespace || "(default)"}`);
     } catch (e) {
       console.warn("[Arena] Invalid WebSocket URL, using default");
-      wsUrl = "https://vorld-arena-server.onrender.com";
+      baseUrl = "https://airdrop-arcade.onrender.com";
     }
 
-    console.log("[Arena] Connecting to WebSocket:", wsUrl);
+    // Connect to base URL + namespace
+    // Socket.IO namespace is part of the connection URL, not a separate option
+    const connectionUrl = namespace ? `${baseUrl}${namespace}` : baseUrl;
 
-    this.socket = io(wsUrl, {
+    console.log("[Arena] Full connection URL:", connectionUrl);
+
+    this.socket = io(connectionUrl, {
       transports: ["websocket", "polling"],
       timeout: 30000,
       forceNew: true,
@@ -157,7 +176,11 @@ export class ArenaIntegrationService {
     });
 
     this.socket.on("reconnect", (attemptNumber) => {
-      console.log("[Arena] WebSocket reconnected after", attemptNumber, "attempts");
+      console.log(
+        "[Arena] WebSocket reconnected after",
+        attemptNumber,
+        "attempts"
+      );
       if (this.config) {
         this.socket?.emit("join_game", this.config.gameId);
       }

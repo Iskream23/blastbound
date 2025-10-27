@@ -1,6 +1,5 @@
 import { Scene } from "phaser";
 import { ActiveBoost } from "../managers/BoostManager";
-import { ItemPickup } from "../managers/ItemDropManager";
 
 export class ArenaUI {
   private scene: Scene;
@@ -8,7 +7,7 @@ export class ArenaUI {
 
   // UI Elements
   private connectionStatus!: Phaser.GameObjects.Text;
-  private statusIndicator!: Phaser.GameObjects.Circle;
+  private statusIndicator!: Phaser.GameObjects.Arc;
   private gameIdText!: Phaser.GameObjects.Text;
   private boostsContainer!: Phaser.GameObjects.Container;
   private metricsContainer!: Phaser.GameObjects.Container;
@@ -20,7 +19,6 @@ export class ArenaUI {
 
   // State
   private isConnected: boolean = false;
-  private gameId: string = "";
   private gameStartTime: number = 0;
   private enemiesKilled: number = 0;
   private cratesDestroyed: number = 0;
@@ -157,7 +155,6 @@ export class ArenaUI {
    * Set game ID
    */
   public setGameId(gameId: string): void {
-    this.gameId = gameId;
     this.gameIdText.setText(`ID: ${gameId.substring(0, 12)}...`);
   }
 
